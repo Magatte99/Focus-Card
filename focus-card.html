@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Focus — Une chose à la fois</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root {
+  --bg:#0E0E10; --surface:#1A1A1D; --surface2:#242427;
+  --border:rgba(255,255,255,0.09); --border-mid:rgba(255,255,255,0.18);
+  --text:#F2F1EE; --text-muted:#9C9A95; --text-hint:#65635F;
+  --accent:#FF6B4A; --accent-dim:#3D2A22;
+  --good:#3DD68C; --bad:#FF5C5C; --warn:#FFB84D;
+  --radius:18px; --radius-sm:10px;
+  --font:'Instrument Sans',sans-serif; --mono:'DM Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:15px;line-height:1.5;overflow:hidden}
+button{font-family:var(--font)}
+input{font-family:var(--font)}
+
+.app{display:flex;flex-direction:column;height:100vh;max-width:560px;margin:0 auto;position:relative}
+
+/* ---------- Top bar ---------- */
+.topbar{display:flex;align-items:center;gap:10px;padding:16px 18px 10px;flex-shrink:0}
+.topbar-title{font-size:13px;font-weight:700;letter-spacing:.04em;color:var(--text-muted);text-transform:uppercase;flex:1}
+.remaining-pill{font-family:var(--mono);font-size:12.5px;color:var(--text-hint);background:var(--surface);border:1px solid var(--border);padding:5px 11px;border-radius:99px;cursor:pointer;display:flex;align-items:center;gap:6px}
+.remaining-pill:active{background:var(--surface2)}
+.day-pill{font-family:var(--mono);font-size:12.5px;color:var(--good);background:rgba(61,214,140,.1);border:1px solid rgba(61,214,140,.25);padding:5px 11px;border-radius:99px;display:flex;align-items:center;gap:5px}
+
+/* ---------- Capture bar ---------- */
+.capture-bar{display:flex;gap:8px;padding:0 18px 14px;flex-shrink:0}
+.capture-bar input{flex:1;padding:13px 15px;font-size:15px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);outline:none}
+.capture-bar input::placeholder{color:var(--text-hint)}
+.capture-bar input:focus{border-color:var(--border-mid)}
+.capture-bar button{width:46px;flex-shrink:0;border:none;border-radius:var(--radius-sm);background:var(--accent);color:#1A0E08;font-size:19px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.capture-bar button:active{opacity:.8}
+
+/* ---------- Card stage ---------- */
+.stage{flex:1;display:flex;align-items:center;justify-content:center;padding:10px 18px 8px;position:relative;min-height:0}
+.card-wrap{width:100%;max-width:420px;position:relative;height:min(58vh,420px)}
+.card{position:absolute;inset:0;background:var(--surface);border:1.5px solid var(--border-mid);border-radius:var(--radius);padding:28px 26px;display:flex;flex-direction:column;box-shadow:0 20px 50px rgba(0,0,0,.45);touch-action:pan-y;user-select:none;cursor:grab}
+.card.dragging{cursor:grabbing;transition:none}
+.card.snap-back{transition:transform .25s cubic-bezier(.2,.8,.2,1)}
+.card.fly-out{transition:transform .3s ease,opacity .3s ease}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:5px;background:var(--accent);border-radius:var(--radius) var(--radius) 0 0}
+.card-priority-badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.05em;margin-bottom:14px}
+.card-stale-badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:var(--bad);text-transform:uppercase;letter-spacing:.05em;margin-bottom:14px;background:rgba(255,92,92,.12);padding:5px 10px;border-radius:99px;width:fit-content}
+.card-due-badge{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;margin-bottom:14px;padding:5px 10px;border-radius:99px;width:fit-content}
+.card-due-badge.overdue{color:var(--bad);background:rgba(255,92,92,.12)}
+.card-due-badge.today{color:var(--warn);background:rgba(255,184,77,.12)}
+.card-due-badge.upcoming{color:var(--text-muted);background:var(--surface2)}
+.card.is-stale{border-color:rgba(255,92,92,.5)}
+.card.is-stale::before{background:var(--bad)}
+.card-text{flex:1;display:flex;align-items:center;font-size:23px;font-weight:600;line-height:1.35;word-break:break-word}
+.card-note{font-size:13.5px;color:var(--text-muted);font-style:italic;margin-top:8px;padding-top:12px;border-top:1px solid var(--border)}
+.card-meta{font-family:var(--mono);font-size:11px;color:var(--text-hint);margin-top:10px}
+.swipe-stamp{position:absolute;top:24px;font-weight:800;font-size:22px;letter-spacing:.04em;border:3px solid;border-radius:10px;padding:5px 14px;opacity:0;transform:rotate(-8deg)}
+.swipe-stamp.done{right:20px;color:var(--good);border-color:var(--good)}
+.swipe-stamp.skip{left:20px;color:var(--warn);border-color:var(--warn);transform:rotate(8deg)}
+
+.card-ghost{position:absolute;inset:0;background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--radius);transform:scale(.94) translateY(10px);z-index:-1;opacity:.6}
+
+.empty-state{text-align:center;color:var(--text-muted);padding:40px 20px}
+.empty-state i{font-size:38px;color:var(--text-hint);display:block;margin-bottom:14px}
+.empty-state h3{font-size:17px;font-weight:600;color:var(--text);margin-bottom:6px}
+.empty-state p{font-size:13.5px;line-height:1.5}
+
+/* ---------- Action buttons (desktop / fallback) ---------- */
+.action-row{display:flex;gap:8px;padding:10px 18px 18px;flex-shrink:0}
+.action-btn{flex:1;padding:15px 8px;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:background .12s,border-color .12s;min-width:0}
+.action-btn span{white-space:nowrap;overflow:hidden}
+.action-btn:active{background:var(--surface2)}
+.action-btn.skip{color:var(--warn)}
+.action-btn.skip:hover{border-color:var(--warn)}
+.action-btn.done{background:var(--good);color:#06231A;border-color:var(--good)}
+.action-btn.done:hover{opacity:.9}
+.action-btn.note{flex:0 0 44px}
+.action-btn.priority{flex:0 0 44px;color:var(--accent)}
+.action-btn.priority.active{background:var(--accent-dim);border-color:var(--accent)}
+
+/* ---------- Sheet (liste complète, cachée par défaut) ---------- */
+.sheet-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:90;display:none;align-items:flex-end;justify-content:center}
+.sheet-overlay.show{display:flex}
+.sheet{background:var(--bg);border-radius:20px 20px 0 0;width:100%;max-width:560px;max-height:82vh;display:flex;flex-direction:column;border:1px solid var(--border);border-bottom:none;animation:sheetUp .22s ease}
+@keyframes sheetUp{from{transform:translateY(30px);opacity:.5}to{transform:translateY(0);opacity:1}}
+.sheet-handle{width:36px;height:4px;background:var(--border-mid);border-radius:99px;margin:10px auto}
+.sheet-header{padding:6px 20px 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)}
+.sheet-header h3{font-size:15px;font-weight:600;flex:1}
+.sheet-close{background:none;border:none;color:var(--text-hint);font-size:18px;cursor:pointer;padding:4px}
+.sheet-body{overflow-y:auto;padding:8px 14px 24px;flex:1}
+.sheet-row{display:flex;align-items:center;gap:10px;padding:12px 10px;border-radius:var(--radius-sm);margin-bottom:3px}
+.sheet-row:active{background:var(--surface)}
+.sheet-row-text{flex:1;font-size:14px;min-width:0}
+.sheet-row.next .sheet-row-text{font-weight:600;color:var(--accent)}
+.sheet-row-btn{background:none;border:none;color:var(--text-hint);font-size:16px;cursor:pointer;padding:5px;border-radius:6px;flex-shrink:0}
+.sheet-row-btn:active{background:var(--surface2)}
+.sheet-row-btn.star.active{color:var(--accent)}
+.sheet-row-due{font-size:10px;font-family:var(--mono);color:var(--text-hint);flex-shrink:0;padding:3px 7px;border-radius:6px;background:var(--surface2)}
+.sheet-row-due.overdue{color:var(--bad);background:rgba(255,92,92,.12)}
+.sheet-row-due.today{color:var(--warn);background:rgba(255,184,77,.12)}
+.sheet-row.stale .sheet-row-text{color:var(--bad)}
+
+.due-popover{position:fixed;background:var(--surface);border:1px solid var(--border-mid);border-radius:var(--radius-sm);padding:12px;z-index:150;box-shadow:0 10px 30px rgba(0,0,0,.4);display:none;width:220px}
+.due-popover.show{display:block}
+.due-popover-row{display:flex;gap:6px;margin-bottom:8px}
+.due-popover button{flex:1;padding:8px;font-size:12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text-muted);cursor:pointer}
+.due-popover button:active{background:var(--surface2)}
+.due-popover input[type=date]{width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-family:var(--font);margin-bottom:8px;font-size:13px}
+.due-popover .clear-due{color:var(--bad);font-size:12px;text-align:center;cursor:pointer;padding:6px}
+.sheet-tab-bar{display:flex;gap:6px;padding:0 14px 10px}
+.sheet-tab{flex:1;text-align:center;padding:8px;font-size:12.5px;border-radius:99px;background:var(--surface);color:var(--text-muted);cursor:pointer;border:1px solid transparent}
+.sheet-tab.active{background:var(--accent-dim);color:var(--accent);border-color:var(--accent)}
+
+/* ---------- Note modal ---------- */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.show{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);width:100%;max-width:380px;padding:20px}
+.modal h3{font-size:15px;font-weight:600;margin-bottom:12px}
+.modal textarea{width:100%;min-height:90px;padding:11px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:var(--font);font-size:14px;outline:none;resize:vertical}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+.modal-actions button{padding:9px 16px;border-radius:var(--radius-sm);border:1px solid var(--border);background:transparent;color:var(--text-muted);font-size:13px;cursor:pointer}
+.modal-actions button.save{background:var(--accent);color:#1A0E08;border-color:var(--accent);font-weight:600}
+
+/* ---------- Streak toast ---------- */
+.streak-toast{position:fixed;top:18px;left:50%;transform:translateX(-50%) translateY(-20px);background:var(--accent);color:#1A0E08;padding:11px 18px;border-radius:99px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px;box-shadow:0 8px 24px rgba(255,107,74,.35);z-index:200;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s}
+.streak-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+@media(min-width:560px){
+  .action-row{padding-bottom:24px}
+}
+
+/* ---------- Écran code perso ---------- */
+.gate{position:fixed;inset:0;background:var(--bg);z-index:300;display:flex;align-items:center;justify-content:center;padding:24px}
+.gate-box{width:100%;max-width:340px;text-align:center}
+.gate-box i{font-size:36px;color:var(--accent);display:block;margin-bottom:16px}
+.gate-box h2{font-size:18px;font-weight:700;margin-bottom:6px}
+.gate-box p{font-size:13px;color:var(--text-muted);margin-bottom:22px;line-height:1.5}
+.gate-box input{width:100%;padding:14px;font-size:16px;text-align:center;border:1.5px solid var(--border-mid);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);outline:none;margin-bottom:10px;letter-spacing:.04em}
+.gate-box input:focus{border-color:var(--accent)}
+.gate-box button{width:100%;padding:14px;font-size:14px;font-weight:600;border:none;border-radius:var(--radius-sm);background:var(--accent);color:#1A0E08;cursor:pointer}
+.gate-box button:disabled{opacity:.5;cursor:default}
+.gate-hint{font-size:11.5px;color:var(--text-hint);margin-top:14px;line-height:1.5}
+.gate-error{color:var(--bad);font-size:12.5px;margin-top:10px;min-height:16px}
+.sync-status{position:fixed;bottom:10px;right:14px;font-size:10.5px;font-family:var(--mono);color:var(--text-hint);display:flex;align-items:center;gap:5px;z-index:50}
+.sync-status.error{color:var(--bad)}
+.sync-status i{font-size:12px}
+.sync-status.syncing i{animation:spin 0.8s linear infinite}
+@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<div class="gate" id="gate">
+  <div class="gate-box">
+    <i class="ti ti-lock" aria-hidden="true"></i>
+    <h2>Ton code perso</h2>
+    <p>Choisis un code (ou retape celui que tu utilises déjà) pour retrouver tes tâches sur n'importe quel appareil.</p>
+    <input type="text" id="gate-input" placeholder="ex: magatte99" autocomplete="off" autocapitalize="off" />
+    <button id="gate-btn" onclick="enterApp()">Continuer</button>
+    <div class="gate-error" id="gate-error"></div>
+    <p class="gate-hint">Garde ce code en tête — c'est lui qui retrouve tes données. Pas de mot de passe oublié possible.</p>
+  </div>
+</div>
+
+<div class="app" id="app" style="display:none">
+
+
+  <div class="topbar">
+    <span class="topbar-title">Focus</span>
+    <span class="day-pill"><i class="ti ti-flame" aria-hidden="true"></i><span id="day-count-num">0</span></span>
+    <span class="remaining-pill" id="notif-pill" onclick="requestNotifPermission()" title="Activer les rappels"><i class="ti ti-bell" aria-hidden="true"></i></span>
+    <span class="remaining-pill" onclick="openSheet()"><i class="ti ti-list" aria-hidden="true"></i><span id="remaining-num">0</span> en attente</span>
+  </div>
+
+  <div class="capture-bar">
+    <input type="text" id="capture-input" placeholder="Une tâche qui te passe par la tête…" autocomplete="off" />
+    <button onclick="capture()"><i class="ti ti-plus" aria-hidden="true"></i></button>
+  </div>
+
+  <div class="stage" id="stage"></div>
+
+  <div class="action-row" id="action-row"></div>
+</div>
+
+<!-- SHEET liste complète -->
+<div class="sheet-overlay" id="sheet-overlay" onclick="if(event.target===this)closeSheet()">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <h3>Toutes les tâches</h3>
+      <button class="sheet-close" onclick="closeSheet()"><i class="ti ti-x" aria-hidden="true"></i></button>
+    </div>
+    <div class="sheet-tab-bar">
+      <div class="sheet-tab active" id="tab-pending" onclick="setSheetTab('pending')">En attente</div>
+      <div class="sheet-tab" id="tab-done" onclick="setSheetTab('done')">Faites</div>
+    </div>
+    <div class="sheet-body" id="sheet-body"></div>
+  </div>
+</div>
+
+<!-- NOTE modal -->
+<div class="modal-overlay" id="note-overlay" onclick="if(event.target===this)closeNote()">
+  <div class="modal">
+    <h3>Petite note</h3>
+    <textarea id="note-input" placeholder="Un détail à ne pas perdre…"></textarea>
+    <div class="modal-actions">
+      <button onclick="closeNote()">Annuler</button>
+      <button class="save" onclick="saveNote()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<div class="streak-toast" id="streak-toast"></div>
+
+<div class="due-popover" id="due-popover">
+  <div class="due-popover-row">
+    <button onclick="setDuePreset(0)">Aujourd'hui</button>
+    <button onclick="setDuePreset(1)">Demain</button>
+  </div>
+  <input type="date" id="due-date-input" onchange="setDueCustom()" />
+  <div class="clear-due" onclick="clearDue()">Retirer l'échéance</div>
+</div>
+
+<div class="sync-status" id="sync-status"></div>
+
+<script>
+/* ====================== ETAT ====================== */
+let state={tasks:[],completions:[],notifEnabled:false};
+let _nid=Date.now();
+let _sheetTab='pending';
+let _noteTarget=null;
+let _dueTarget=null;
+const STALE_DAYS=1;
+
+/* ====================== SUPABASE ====================== */
+const SUPABASE_URL='https://wwtpyleezukzxsfzidmy.supabase.co';
+const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind3dHB5bGVlenVrenhzZnppZG15Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3MzEwODIsImV4cCI6MjA5ODMwNzA4Mn0.OtCkciHjSIYX-HElEIkbLxYI-Z6wpLwXn4dj4QJ8cgI';
+let supa=null;
+let userCode=null;
+let _saveTimeout=null;
+let _isSyncing=false;
+
+function normalizeState(){
+  if(!state.tasks)state.tasks=[];
+  if(!state.completions)state.completions=[];
+  if(state.notifEnabled===undefined)state.notifEnabled=false;
+  state.tasks.forEach(t=>{
+    if(t.note===undefined)t.note='';
+    if(t.priority===undefined)t.priority=false;
+    if(t.ts===undefined)t.ts=Date.now();
+    if(t.skips===undefined)t.skips=0;
+    if(t.due===undefined)t.due=null;
+    if(t.notifiedOverdue===undefined)t.notifiedOverdue=false;
+    if(t.notifiedStale===undefined)t.notifiedStale=false;
+  });
+}
+
+function initSupabase(){
+  try{supa=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);}catch(e){console.error('Supabase init failed',e);}
+}
+
+async function loadState(){
+  // cache local immédiat (pour démarrer vite / mode hors-ligne)
+  try{const cached=localStorage.getItem('focus_card_cache_'+userCode);if(cached)state=JSON.parse(cached);}catch(e){}
+  normalizeState();
+  if(!supa)return;
+  setSyncStatus('syncing');
+  try{
+    const {data,error}=await supa.from('focus_data').select('state').eq('user_code',userCode).maybeSingle();
+    if(error)throw error;
+    if(data&&data.state){
+      state=data.state;
+      normalizeState();
+      localStorage.setItem('focus_card_cache_'+userCode,JSON.stringify(state));
+    } else {
+      // première connexion avec ce code : on crée la ligne
+      await supa.from('focus_data').insert({user_code:userCode,state});
+    }
+    setSyncStatus('ok');
+  }catch(e){
+    console.error('Erreur de chargement Supabase',e);
+    setSyncStatus('error');
+  }
+}
+
+function save(){
+  normalizeState();
+  try{localStorage.setItem('focus_card_cache_'+userCode,JSON.stringify(state));}catch(e){}
+  // debounce : on évite de spammer Supabase à chaque petite action
+  if(_saveTimeout)clearTimeout(_saveTimeout);
+  _saveTimeout=setTimeout(syncToSupabase,600);
+}
+async function syncToSupabase(){
+  if(!supa||!userCode)return;
+  _isSyncing=true;setSyncStatus('syncing');
+  try{
+    const {error}=await supa.from('focus_data').upsert({user_code:userCode,state,updated_at:new Date().toISOString()});
+    if(error)throw error;
+    setSyncStatus('ok');
+  }catch(e){
+    console.error('Erreur de sauvegarde Supabase',e);
+    setSyncStatus('error');
+  }
+  _isSyncing=false;
+}
+function setSyncStatus(status){
+  const el=document.getElementById('sync-status');
+  if(!el)return;
+  if(status==='syncing')el.innerHTML=`<i class="ti ti-refresh" aria-hidden="true"></i> Sync…`;
+  else if(status==='ok')el.innerHTML=`<i class="ti ti-cloud-check" aria-hidden="true"></i> À jour`;
+  else el.innerHTML=`<i class="ti ti-cloud-off" aria-hidden="true"></i> Hors-ligne — sauvegardé localement`;
+  el.className='sync-status'+(status==='error'?' error':status==='syncing'?' syncing':'');
+}
+
+/* ====================== ÉCRAN CODE PERSO ====================== */
+function enterApp(){
+  const inp=document.getElementById('gate-input');
+  const code=inp.value.trim().toLowerCase().replace(/[^a-z0-9_-]/g,'');
+  const errEl=document.getElementById('gate-error');
+  if(!code||code.length<3){errEl.textContent='Au moins 3 caractères (lettres/chiffres).';return;}
+  errEl.textContent='';
+  document.getElementById('gate-btn').disabled=true;
+  userCode=code;
+  localStorage.setItem('focus_card_last_code',code);
+  startApp();
+}
+async function startApp(){
+  initSupabase();
+  await loadState();
+  document.getElementById('gate').style.display='none';
+  document.getElementById('app').style.display='flex';
+  renderAll();
+  checkReminders();
+  setInterval(checkReminders,5*60000);
+  document.getElementById('capture-input').addEventListener('keydown',e=>{if(e.key==='Enter')capture();});
+  setTimeout(()=>document.getElementById('capture-input').focus(),150);
+}
+
+/* ====================== HELPERS ====================== */
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function isToday(ts){const d=new Date(ts),n=new Date();return d.toDateString()===n.toDateString();}
+function daysSince(ts){
+  const d1=new Date(ts);d1.setHours(0,0,0,0);
+  const d2=new Date();d2.setHours(0,0,0,0);
+  return Math.round((d2-d1)/86400000);
+}
+function isStale(t){return !t.due && daysSince(t.ts)>=STALE_DAYS;}
+function dueStatus(t){
+  if(!t.due)return null;
+  const today=new Date();today.setHours(0,0,0,0);
+  const due=new Date(t.due);due.setHours(0,0,0,0);
+  if(due<today)return 'overdue';
+  if(due.getTime()===today.getTime())return 'today';
+  return 'upcoming';
+}
+function fmtDue(ts){
+  const d=new Date(ts);const months=['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc'];
+  return `${d.getDate()} ${months[d.getMonth()]}`;
+}
+function pendingTasks(){
+  // priorité d'abord (dans leur ordre), puis le reste par ancienneté (FIFO)
+  const pending=state.tasks.filter(t=>!t.done);
+  const prio=pending.filter(t=>t.priority).sort((a,b)=>a.ts-b.ts);
+  const rest=pending.filter(t=>!t.priority).sort((a,b)=>a.ts-b.ts);
+  return [...prio,...rest];
+}
+function currentTask(){const p=pendingTasks();return p.length?p[0]:null;}
+
+/* ====================== CAPTURE ====================== */
+function capture(){
+  const inp=document.getElementById('capture-input');
+  const text=inp.value.trim();
+  if(!text)return;
+  state.tasks.push({id:'t'+(_nid++),text,done:false,note:'',priority:false,ts:Date.now(),skips:0});
+  save();
+  inp.value='';
+  inp.focus();
+  renderAll();
+}
+
+/* ====================== CARD STAGE ====================== */
+let _drag={active:false,startX:0,startY:0,dx:0,cardEl:null};
+
+function renderStage(){
+  const stage=document.getElementById('stage');
+  const t=currentTask();
+  if(!t){
+    stage.innerHTML=`<div class="empty-state">
+      <i class="ti ti-confetti" aria-hidden="true"></i>
+      <h3>Rien en attente</h3>
+      <p>Ajoute une tâche en haut, ou souffle un peu — c'est aussi très bien.</p>
+    </div>`;
+    document.getElementById('action-row').innerHTML='';
+    return;
+  }
+  const hasNote=t.note&&t.note.trim();
+  const due=dueStatus(t);
+  const stale=isStale(t);
+  let badgeHtml='';
+  if(t.priority)badgeHtml+=`<div class="card-priority-badge"><i class="ti ti-star-filled" aria-hidden="true"></i> Priorité</div>`;
+  if(due==='overdue')badgeHtml+=`<div class="card-due-badge overdue"><i class="ti ti-alert-triangle" aria-hidden="true"></i> En retard — ${fmtDue(t.due)}</div>`;
+  else if(due==='today')badgeHtml+=`<div class="card-due-badge today"><i class="ti ti-calendar-event" aria-hidden="true"></i> Pour aujourd'hui</div>`;
+  else if(due==='upcoming')badgeHtml+=`<div class="card-due-badge upcoming"><i class="ti ti-calendar" aria-hidden="true"></i> Pour le ${fmtDue(t.due)}</div>`;
+  else if(stale)badgeHtml+=`<div class="card-stale-badge"><i class="ti ti-hourglass" aria-hidden="true"></i> Ça traîne depuis ${daysSince(t.ts)} jour${daysSince(t.ts)>1?'s':''}</div>`;
+  stage.innerHTML=`
+    <div class="card-wrap">
+      <div class="card-ghost"></div>
+      <div class="card${stale||due==='overdue'?' is-stale':''}" id="active-card" data-tid="${t.id}">
+        <div class="swipe-stamp done" id="stamp-done">FAIT</div>
+        <div class="swipe-stamp skip" id="stamp-skip">PLUS TARD</div>
+        ${badgeHtml}
+        <div class="card-text">${esc(t.text)}</div>
+        ${hasNote?`<div class="card-note">${esc(t.note)}</div>`:''}
+        <div class="card-meta">${pendingTasks().length} en attente</div>
+      </div>
+    </div>`;
+  document.getElementById('action-row').innerHTML=`
+    <button class="action-btn skip" onclick="skipTask('${t.id}')"><i class="ti ti-clock-pause" aria-hidden="true"></i> Plus tard</button>
+    <button class="action-btn note" title="Note" onclick="openNote('${t.id}')"><i class="ti ti-note" aria-hidden="true"></i></button>
+    <button class="action-btn priority" title="Échéance" onclick="openDuePopover('${t.id}',this)"><i class="ti ti-calendar" aria-hidden="true"></i></button>
+    <button class="action-btn priority${t.priority?' active':''}" title="Priorité" onclick="togglePriority('${t.id}')"><i class="ti ti-star${t.priority?'-filled':''}" aria-hidden="true"></i></button>
+    <button class="action-btn done" onclick="doneTask('${t.id}')"><i class="ti ti-check" aria-hidden="true"></i> Fait</button>`;
+  wireSwipe();
+}
+
+function wireSwipe(){
+  const card=document.getElementById('active-card');
+  if(!card)return;
+  const stampDone=document.getElementById('stamp-done');
+  const stampSkip=document.getElementById('stamp-skip');
+
+  function onStart(x,y){
+    _drag={active:true,startX:x,startY:y,dx:0,cardEl:card};
+    card.classList.remove('snap-back','fly-out');
+  }
+  function onMove(x,y){
+    if(!_drag.active)return;
+    _drag.dx=x-_drag.startX;
+    const dy=(y-_drag.startY)*0.15;
+    const rot=_drag.dx/18;
+    card.style.transform=`translate(${_drag.dx}px,${dy}px) rotate(${rot}deg)`;
+    const ratio=Math.min(1,Math.abs(_drag.dx)/120);
+    if(_drag.dx>0){stampDone.style.opacity=ratio;stampSkip.style.opacity=0;}
+    else if(_drag.dx<0){stampSkip.style.opacity=ratio;stampDone.style.opacity=0;}
+    else{stampDone.style.opacity=0;stampSkip.style.opacity=0;}
+  }
+  function onEnd(){
+    if(!_drag.active)return;
+    _drag.active=false;
+    const tid=card.dataset.tid;
+    if(_drag.dx>110){
+      flyOut(card,1);
+      setTimeout(()=>doneTask(tid),220);
+    } else if(_drag.dx<-110){
+      flyOut(card,-1);
+      setTimeout(()=>skipTask(tid),220);
+    } else {
+      card.classList.add('snap-back');
+      card.style.transform='translate(0,0) rotate(0)';
+      stampDone.style.opacity=0;stampSkip.style.opacity=0;
+    }
+  }
+  function flyOut(card,dir){
+    card.classList.add('fly-out');
+    card.style.transform=`translate(${dir*window.innerWidth}px,-30px) rotate(${dir*18}deg)`;
+    card.style.opacity='0';
+  }
+
+  card.addEventListener('mousedown',e=>{onStart(e.clientX,e.clientY);e.preventDefault();});
+  window.addEventListener('mousemove',e=>{if(_drag.active)onMove(e.clientX,e.clientY);});
+  window.addEventListener('mouseup',()=>{if(_drag.active)onEnd();});
+
+  card.addEventListener('touchstart',e=>{const t=e.touches[0];onStart(t.clientX,t.clientY);},{passive:true});
+  card.addEventListener('touchmove',e=>{const t=e.touches[0];onMove(t.clientX,t.clientY);},{passive:true});
+  card.addEventListener('touchend',()=>{onEnd();});
+}
+
+/* ====================== ACTIONS SUR LA TÂCHE ====================== */
+function doneTask(tid){
+  const t=state.tasks.find(x=>x.id===tid);
+  if(!t)return;
+  t.done=true;
+  state.completions.push(Date.now());
+  save();
+  renderAll();
+  checkStreak();
+}
+function skipTask(tid){
+  const t=state.tasks.find(x=>x.id===tid);
+  if(!t)return;
+  t.skips=(t.skips||0)+1;
+  t.ts=Date.now(); // repasse en fin de file (sauf si priorité)
+  save();
+  renderAll();
+}
+function togglePriority(tid){
+  const t=state.tasks.find(x=>x.id===tid);
+  if(!t)return;
+  t.priority=!t.priority;
+  save();renderAll();
+}
+function openDuePopover(tid,btnEl){
+  _dueTarget=tid;
+  const t=state.tasks.find(x=>x.id===tid);
+  const pop=document.getElementById('due-popover');
+  const rect=btnEl.getBoundingClientRect();
+  pop.style.bottom=(window.innerHeight-rect.top+8)+'px';
+  pop.style.left=Math.max(10,Math.min(window.innerWidth-230,rect.left-80))+'px';
+  document.getElementById('due-date-input').value=t&&t.due?new Date(t.due).toISOString().slice(0,10):'';
+  pop.classList.add('show');
+  setTimeout(()=>document.addEventListener('click',closeDuePopoverOutside),10);
+}
+function closeDuePopoverOutside(e){
+  const pop=document.getElementById('due-popover');
+  if(!pop.contains(e.target)){pop.classList.remove('show');document.removeEventListener('click',closeDuePopoverOutside);}
+}
+function setDuePreset(daysFromNow){
+  const t=state.tasks.find(x=>x.id===_dueTarget);
+  if(!t)return;
+  const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()+daysFromNow);
+  t.due=d.getTime();t.notifiedOverdue=false;
+  save();document.getElementById('due-popover').classList.remove('show');renderAll();
+}
+function setDueCustom(){
+  const t=state.tasks.find(x=>x.id===_dueTarget);
+  const val=document.getElementById('due-date-input').value;
+  if(!t||!val)return;
+  const d=new Date(val+'T00:00:00');
+  t.due=d.getTime();t.notifiedOverdue=false;
+  save();document.getElementById('due-popover').classList.remove('show');renderAll();
+}
+function clearDue(){
+  const t=state.tasks.find(x=>x.id===_dueTarget);
+  if(t){t.due=null;save();renderAll();}
+  document.getElementById('due-popover').classList.remove('show');
+}
+function deleteTask(tid){
+  const idx=state.tasks.findIndex(t=>t.id===tid);
+  if(idx<0)return;
+  state.tasks.splice(idx,1);
+  save();renderAll();renderSheet();
+}
+function unmarkDone(tid){
+  const t=state.tasks.find(x=>x.id===tid);
+  if(!t)return;
+  t.done=false;
+  state.completions.pop();
+  save();renderAll();renderSheet();
+}
+
+/* ====================== NOTE ====================== */
+function openNote(tid){
+  _noteTarget=tid;
+  const t=state.tasks.find(x=>x.id===tid);if(!t)return;
+  document.getElementById('note-input').value=t.note||'';
+  document.getElementById('note-overlay').classList.add('show');
+  setTimeout(()=>document.getElementById('note-input').focus(),60);
+}
+function closeNote(){document.getElementById('note-overlay').classList.remove('show');_noteTarget=null;}
+function saveNote(){
+  if(!_noteTarget)return;
+  const t=state.tasks.find(x=>x.id===_noteTarget);
+  if(t){t.note=document.getElementById('note-input').value.trim();save();renderAll();}
+  closeNote();
+}
+
+/* ====================== SHEET (liste complète) ====================== */
+function openSheet(){document.getElementById('sheet-overlay').classList.add('show');renderSheet();}
+function closeSheet(){document.getElementById('sheet-overlay').classList.remove('show');}
+function setSheetTab(tab){_sheetTab=tab;document.getElementById('tab-pending').classList.toggle('active',tab==='pending');document.getElementById('tab-done').classList.toggle('active',tab==='done');renderSheet();}
+function renderSheet(){
+  const body=document.getElementById('sheet-body');
+  if(_sheetTab==='pending'){
+    const list=pendingTasks();
+    if(!list.length){body.innerHTML=`<div class="sheet-empty">Rien en attente.</div>`;return;}
+    const nextId=list[0].id;
+    body.innerHTML=list.map(t=>{
+      const due=dueStatus(t);
+      const stale=isStale(t);
+      let dueHtml='';
+      if(due==='overdue')dueHtml=`<span class="sheet-row-due overdue">retard</span>`;
+      else if(due==='today')dueHtml=`<span class="sheet-row-due today">aujourd'hui</span>`;
+      else if(due==='upcoming')dueHtml=`<span class="sheet-row-due">${fmtDue(t.due)}</span>`;
+      else if(stale)dueHtml=`<span class="sheet-row-due overdue">${daysSince(t.ts)}j</span>`;
+      return `<div class="sheet-row${stale||due==='overdue'?' stale':''}">
+        <button class="sheet-row-btn star${t.priority?' active':''}" onclick="togglePriority('${t.id}');renderSheet()"><i class="ti ti-star${t.priority?'-filled':''}" aria-hidden="true"></i></button>
+        <span class="sheet-row-text">${esc(t.text)}</span>
+        ${dueHtml}
+        ${t.id===nextId?`<span style="font-size:10px;color:var(--accent);font-family:var(--mono);flex-shrink:0">EN COURS</span>`:''}
+        <button class="sheet-row-btn" onclick="deleteTask('${t.id}')"><i class="ti ti-trash" aria-hidden="true"></i></button>
+      </div>`;
+    }).join('');
+  } else {
+    const list=state.tasks.filter(t=>t.done).sort((a,b)=>b.ts-a.ts);
+    if(!list.length){body.innerHTML=`<div class="sheet-empty">Rien de fait pour l'instant.</div>`;return;}
+    body.innerHTML=list.map(t=>`
+      <div class="sheet-row">
+        <i class="ti ti-circle-check" style="color:var(--good);flex-shrink:0" aria-hidden="true"></i>
+        <span class="sheet-row-text" style="text-decoration:line-through;color:var(--text-muted)">${esc(t.text)}</span>
+        <button class="sheet-row-btn" title="Remettre en attente" onclick="unmarkDone('${t.id}')"><i class="ti ti-arrow-back-up" aria-hidden="true"></i></button>
+        <button class="sheet-row-btn" onclick="deleteTask('${t.id}')"><i class="ti ti-trash" aria-hidden="true"></i></button>
+      </div>`).join('');
+  }
+}
+
+/* ====================== PETITES VICTOIRES ====================== */
+function todayCompletions(){return state.completions.filter(ts=>isToday(ts));}
+function renderCounts(){
+  document.getElementById('day-count-num').textContent=todayCompletions().length;
+  document.getElementById('remaining-num').textContent=pendingTasks().length;
+  const notifOn=state.notifEnabled&&'Notification' in window&&Notification.permission==='granted';
+  const pill=document.getElementById('notif-pill');
+  pill.innerHTML=`<i class="ti ti-bell${notifOn?'-ringing':''}" aria-hidden="true"></i>`;
+  pill.style.color=notifOn?'var(--accent)':'';
+  pill.style.borderColor=notifOn?'var(--accent)':'';
+}
+function checkStreak(){
+  const c=[...state.completions].sort((a,b)=>a-b);
+  if(c.length<2)return;
+  let streak=1;
+  for(let i=c.length-1;i>0;i--){
+    if(c[i]-c[i-1]<=20*60000)streak++;
+    else break;
+  }
+  if(streak===2)showToast('2 d\'affilée 🔥');
+  else if(streak===3)showToast('3 d\'affilée 🔥🔥');
+  else if(streak>=4&&streak%2===0)showToast(`${streak} d'affilée — beau rythme 🔥`);
+}
+let _toastTimeout=null;
+function showToast(text){
+  const el=document.getElementById('streak-toast');
+  el.textContent=text;
+  el.classList.add('show');
+  if(_toastTimeout)clearTimeout(_toastTimeout);
+  _toastTimeout=setTimeout(()=>el.classList.remove('show'),2800);
+}
+
+/* ====================== NOTIFICATIONS & RAPPELS ====================== */
+function requestNotifPermission(){
+  if(!('Notification' in window)){alert('Ton navigateur ne supporte pas les notifications.');return;}
+  Notification.requestPermission().then(perm=>{
+    state.notifEnabled=(perm==='granted');
+    save();renderCounts();
+    if(state.notifEnabled)showToast('Rappels activés ✓');
+  });
+}
+function notify(title,body){
+  if(state.notifEnabled&&'Notification' in window&&Notification.permission==='granted'){
+    try{
+      const n=new Notification(title,{body,tag:'task-reminder-'+Math.random()});
+      n.onclick=()=>{window.focus();n.close();};
+    }catch(e){}
+  }
+}
+// Vérifie échéances dépassées + tâches qui traînent, notifie une seule fois chacune
+function checkReminders(){
+  let changed=false;
+  state.tasks.filter(t=>!t.done).forEach(t=>{
+    const due=dueStatus(t);
+    if(due==='overdue'&&!t.notifiedOverdue){
+      notify('Échéance dépassée',t.text);
+      t.notifiedOverdue=true;changed=true;
+    } else if(due==='today'&&!t.notifiedOverdue){
+      notify("C'est pour aujourd'hui",t.text);
+      t.notifiedOverdue=true;changed=true;
+    }
+    if(!t.due&&isStale(t)&&!t.notifiedStale){
+      notify('Ça traîne depuis '+daysSince(t.ts)+' jour(s)',t.text);
+      t.notifiedStale=true;changed=true;
+    }
+  });
+  if(changed)save();
+}
+
+/* ====================== RENDER GLOBAL ====================== */
+function renderAll(){renderStage();renderCounts();}
+
+// Démarrage : on pré-remplit le dernier code utilisé sur cet appareil, mais on attend la confirmation
+const _lastCode=localStorage.getItem('focus_card_last_code');
+if(_lastCode)document.getElementById('gate-input').value=_lastCode;
+document.getElementById('gate-input').addEventListener('keydown',e=>{if(e.key==='Enter')enterApp();});
+setTimeout(()=>document.getElementById('gate-input').focus(),100);
+</script>
+</body>
+</html>
