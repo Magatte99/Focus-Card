@@ -94,8 +94,9 @@ input{font-family:var(--font)}
 .sheet-header h3{font-size:15px;font-weight:600;flex:1}
 .sheet-close{background:none;border:none;color:var(--text-hint);font-size:18px;cursor:pointer;padding:4px}
 .sheet-body{overflow-y:auto;padding:8px 14px 24px;flex:1}
-.sheet-row{display:flex;align-items:center;gap:10px;padding:12px 10px;border-radius:var(--radius-sm);margin-bottom:3px}
+.sheet-row{display:flex;flex-direction:column;gap:4px;padding:12px 10px;border-radius:var(--radius-sm);margin-bottom:3px;border:1px solid transparent}
 .sheet-row:active{background:var(--surface)}
+.sheet-row-main{display:flex;align-items:center;gap:10px;width:100%}
 .sheet-row-text{flex:1;font-size:14px;min-width:0}
 .sheet-row.next .sheet-row-text{font-weight:600;color:var(--accent)}
 .sheet-row-btn{background:none;border:none;color:var(--text-hint);font-size:16px;cursor:pointer;padding:5px;border-radius:6px;flex-shrink:0}
@@ -105,6 +106,7 @@ input{font-family:var(--font)}
 .sheet-row-due.overdue{color:var(--bad);background:rgba(255,92,92,.12)}
 .sheet-row-due.today{color:var(--warn);background:rgba(255,184,77,.12)}
 .sheet-row.stale .sheet-row-text{color:var(--bad)}
+.sheet-row-note-preview{font-size:12.5px;color:var(--text-muted);font-style:italic;padding-left:32px;border-top:1px dashed var(--border);margin-top:4px;padding-top:4px}
 
 .due-popover{position:fixed;background:var(--surface);border:1px solid var(--border-mid);border-radius:var(--radius-sm);padding:12px;z-index:150;box-shadow:0 10px 30px rgba(0,0,0,.4);display:none;width:220px}
 .due-popover.show{display:block}
@@ -199,6 +201,7 @@ input{font-family:var(--font)}
     <div class="sheet-tab-bar">
       <div class="sheet-tab active" id="tab-pending" onclick="setSheetTab('pending')">En attente</div>
       <div class="sheet-tab" id="tab-done" onclick="setSheetTab('done')">Faites</div>
+      <div class="sheet-tab" id="tab-archived" onclick="setSheetTab('archived')">Archivées 📂</div>
     </div>
     <div class="sheet-body" id="sheet-body"></div>
   </div>
@@ -258,6 +261,7 @@ function normalizeState(){
     if(t.due===undefined)t.due=null;
     if(t.notifiedOverdue===undefined)t.notifiedOverdue=false;
     if(t.notifiedStale===undefined)t.notifiedStale=false;
+    if(t.archived===undefined)t.archived=false; // Init propriété archive
   });
 }
 
@@ -266,7 +270,6 @@ function initSupabase(){
 }
 
 async function loadState(){
-  // cache local immédiat (pour démarrer vite / mode hors-ligne)
   try{const cached=localStorage.getItem('focus_card_cache_'+userCode);if(cached)state=JSON.parse(cached);}catch(e){}
   normalizeState();
   if(!supa)return;
@@ -279,7 +282,6 @@ async function loadState(){
       normalizeState();
       localStorage.setItem('focus_card_cache_'+userCode,JSON.stringify(state));
     } else {
-      // première connexion avec ce code : on crée la ligne
       await supa.from('focus_data').insert({user_code:userCode,state});
     }
     setSyncStatus('ok');
@@ -292,7 +294,6 @@ async function loadState(){
 function save(){
   normalizeState();
   try{localStorage.setItem('focus_card_cache_'+userCode,JSON.stringify(state));}catch(e){}
-  // debounce : on évite de spammer Supabase à chaque petite action
   if(_saveTimeout)clearTimeout(_saveTimeout);
   _saveTimeout=setTimeout(syncToSupabase,600);
 }
@@ -364,8 +365,7 @@ function fmtDue(ts){
   return `${d.getDate()} ${months[d.getMonth()]}`;
 }
 function pendingTasks(){
-  // priorité d'abord (dans leur ordre), puis le reste par ancienneté (FIFO)
-  const pending=state.tasks.filter(t=>!t.done);
+  const pending=state.tasks.filter(t=>!t.done && !t.archived);
   const prio=pending.filter(t=>t.priority).sort((a,b)=>a.ts-b.ts);
   const rest=pending.filter(t=>!t.priority).sort((a,b)=>a.ts-b.ts);
   return [...prio,...rest];
@@ -377,7 +377,7 @@ function capture(){
   const inp=document.getElementById('capture-input');
   const text=inp.value.trim();
   if(!text)return;
-  state.tasks.push({id:'t'+(_nid++),text,done:false,note:'',priority:false,ts:Date.now(),skips:0});
+  state.tasks.push({id:'t'+(_nid++),text,done:false,note:'',priority:false,ts:Date.now(),skips:0,archived:false});
   save();
   inp.value='';
   inp.focus();
@@ -495,7 +495,7 @@ function skipTask(tid){
   const t=state.tasks.find(x=>x.id===tid);
   if(!t)return;
   t.skips=(t.skips||0)+1;
-  t.ts=Date.now(); // repasse en fin de file (sauf si priorité)
+  t.ts=Date.now();
   save();
   renderAll();
 }
@@ -504,6 +504,23 @@ function togglePriority(tid){
   if(!t)return;
   t.priority=!t.priority;
   save();renderAll();
+}
+function archiveTask(tid){
+  const t=state.tasks.find(x=>x.id===tid);
+  if(!t)return;
+  t.archived=true;
+  save();
+  renderAll();
+  renderSheet();
+  showToast('Tâche archivée 📂');
+}
+function unarchiveTask(tid){
+  const t=state.tasks.find(x=>x.id===tid);
+  if(!t)return;
+  t.archived=false;
+  save();
+  renderAll();
+  renderSheet();
 }
 function openDuePopover(tid,btnEl){
   _dueTarget=tid;
@@ -573,39 +590,74 @@ function saveNote(){
 /* ====================== SHEET (liste complète) ====================== */
 function openSheet(){document.getElementById('sheet-overlay').classList.add('show');renderSheet();}
 function closeSheet(){document.getElementById('sheet-overlay').classList.remove('show');}
-function setSheetTab(tab){_sheetTab=tab;document.getElementById('tab-pending').classList.toggle('active',tab==='pending');document.getElementById('tab-done').classList.toggle('active',tab==='done');renderSheet();}
+function setSheetTab(tab){
+  _sheetTab=tab;
+  document.getElementById('tab-pending').classList.toggle('active',tab==='pending');
+  document.getElementById('tab-done').classList.toggle('active',tab==='done');
+  document.getElementById('tab-archived').classList.toggle('active',tab==='archived');
+  renderSheet();
+}
 function renderSheet(){
   const body=document.getElementById('sheet-body');
   if(_sheetTab==='pending'){
     const list=pendingTasks();
-    if(!list.length){body.innerHTML=`<div class="sheet-empty">Rien en attente.</div>`;return;}
+    if(!list.length){body.innerHTML=`<div class="sheet-empty" style="text-align:center;padding:20px;color:var(--text-hint);">Rien en attente.</div>`;return;}
     const nextId=list[0].id;
     body.innerHTML=list.map(t=>{
       const due=dueStatus(t);
       const stale=isStale(t);
+      const hasNote=t.note&&t.note.trim();
       let dueHtml='';
       if(due==='overdue')dueHtml=`<span class="sheet-row-due overdue">retard</span>`;
       else if(due==='today')dueHtml=`<span class="sheet-row-due today">aujourd'hui</span>`;
       else if(due==='upcoming')dueHtml=`<span class="sheet-row-due">${fmtDue(t.due)}</span>`;
       else if(stale)dueHtml=`<span class="sheet-row-due overdue">${daysSince(t.ts)}j</span>`;
       return `<div class="sheet-row${stale||due==='overdue'?' stale':''}">
-        <button class="sheet-row-btn star${t.priority?' active':''}" onclick="togglePriority('${t.id}');renderSheet()"><i class="ti ti-star${t.priority?'-filled':''}" aria-hidden="true"></i></button>
-        <span class="sheet-row-text">${esc(t.text)}</span>
-        ${dueHtml}
-        ${t.id===nextId?`<span style="font-size:10px;color:var(--accent);font-family:var(--mono);flex-shrink:0">EN COURS</span>`:''}
-        <button class="sheet-row-btn" onclick="deleteTask('${t.id}')"><i class="ti ti-trash" aria-hidden="true"></i></button>
+        <div class="sheet-row-main">
+          <button class="sheet-row-btn star${t.priority?' active':''}" onclick="togglePriority('${t.id}');renderSheet()"><i class="ti ti-star${t.priority?'-filled':''}" aria-hidden="true"></i></button>
+          <span class="sheet-row-text">${esc(t.text)}</span>
+          ${dueHtml}
+          ${t.id===nextId?`<span style="font-size:10px;color:var(--accent);font-family:var(--mono);flex-shrink:0">EN COURS</span>`:''}
+          <button class="sheet-row-btn" title="Modifier la note" onclick="openNote('${t.id}')"><i class="ti ti-note" aria-hidden="true"></i></button>
+          <button class="sheet-row-btn" onclick="deleteTask('${t.id}')"><i class="ti ti-trash" aria-hidden="true"></i></button>
+        </div>
+        ${hasNote?`<div class="sheet-row-note-preview">${esc(t.note)}</div>`:''}
+      </div>`;
+    }).join('');
+  } else if(_sheetTab==='done') {
+    const list=state.tasks.filter(t=>t.done && !t.archived).sort((a,b)=>b.ts-a.ts);
+    if(!list.length){body.innerHTML=`<div class="sheet-empty" style="text-align:center;padding:20px;color:var(--text-hint);">Rien de fait pour l'instant.</div>`;return;}
+    body.innerHTML=list.map(t=>{
+      const hasNote=t.note&&t.note.trim();
+      return `
+      <div class="sheet-row">
+        <div class="sheet-row-main">
+          <i class="ti ti-circle-check" style="color:var(--good);flex-shrink:0" aria-hidden="true"></i>
+          <span class="sheet-row-text" style="text-decoration:line-through;color:var(--text-muted)">${esc(t.text)}</span>
+          <button class="sheet-row-btn" title="Archiver la carte" style="color:var(--accent)" onclick="archiveTask('${t.id}')"><i class="ti ti-archive" aria-hidden="true"></i></button>
+          <button class="sheet-row-btn" title="Remettre en attente" onclick="unmarkDone('${t.id}')"><i class="ti ti-arrow-back-up" aria-hidden="true"></i></button>
+          <button class="sheet-row-btn" onclick="deleteTask('${t.id}')"><i class="ti ti-trash" aria-hidden="true"></i></button>
+        </div>
+        ${hasNote?`<div class="sheet-row-note-preview">${esc(t.note)}</div>`:''}
       </div>`;
     }).join('');
   } else {
-    const list=state.tasks.filter(t=>t.done).sort((a,b)=>b.ts-a.ts);
-    if(!list.length){body.innerHTML=`<div class="sheet-empty">Rien de fait pour l'instant.</div>`;return;}
-    body.innerHTML=list.map(t=>`
-      <div class="sheet-row">
-        <i class="ti ti-circle-check" style="color:var(--good);flex-shrink:0" aria-hidden="true"></i>
-        <span class="sheet-row-text" style="text-decoration:line-through;color:var(--text-muted)">${esc(t.text)}</span>
-        <button class="sheet-row-btn" title="Remettre en attente" onclick="unmarkDone('${t.id}')"><i class="ti ti-arrow-back-up" aria-hidden="true"></i></button>
-        <button class="sheet-row-btn" onclick="deleteTask('${t.id}')"><i class="ti ti-trash" aria-hidden="true"></i></button>
-      </div>`).join('');
+    // Onglet ARCHIVÉES
+    const list=state.tasks.filter(t=>t.archived).sort((a,b)=>b.ts-a.ts);
+    if(!list.length){body.innerHTML=`<div class="sheet-empty" style="text-align:center;padding:20px;color:var(--text-hint);">Aucune carte archivée.</div>`;return;}
+    body.innerHTML=list.map(t=>{
+      const hasNote=t.note&&t.note.trim();
+      return `
+      <div class="sheet-row" style="opacity: 0.75; background: rgba(255,255,255,0.02)">
+        <div class="sheet-row-main">
+          <i class="ti ti-archive" style="color:var(--text-hint);flex-shrink:0" aria-hidden="true"></i>
+          <span class="sheet-row-text" style="color:var(--text-muted)">${esc(t.text)}</span>
+          <button class="sheet-row-btn" title="Désarchiver" onclick="unarchiveTask('${t.id}')"><i class="ti ti-archive-off" aria-hidden="true"></i></button>
+          <button class="sheet-row-btn" onclick="deleteTask('${t.id}')"><i class="ti ti-trash" aria-hidden="true"></i></button>
+        </div>
+        ${hasNote?`<div class="sheet-row-note-preview" style="color:var(--text-muted); border-color: rgba(255,255,255,0.05)">${esc(t.note)}</div>`:''}
+      </div>`;
+    }).join('');
   }
 }
 
@@ -658,10 +710,9 @@ function notify(title,body){
     }catch(e){}
   }
 }
-// Vérifie échéances dépassées + tâches qui traînent, notifie une seule fois chacune
 function checkReminders(){
   let changed=false;
-  state.tasks.filter(t=>!t.done).forEach(t=>{
+  state.tasks.filter(t=>!t.done && !t.archived).forEach(t=>{
     const due=dueStatus(t);
     if(due==='overdue'&&!t.notifiedOverdue){
       notify('Échéance dépassée',t.text);
@@ -681,7 +732,6 @@ function checkReminders(){
 /* ====================== RENDER GLOBAL ====================== */
 function renderAll(){renderStage();renderCounts();}
 
-// Démarrage : on pré-remplit le dernier code utilisé sur cet appareil, mais on attend la confirmation
 const _lastCode=localStorage.getItem('focus_card_last_code');
 if(_lastCode)document.getElementById('gate-input').value=_lastCode;
 document.getElementById('gate-input').addEventListener('keydown',e=>{if(e.key==='Enter')enterApp();});
