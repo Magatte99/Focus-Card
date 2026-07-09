@@ -34,11 +34,13 @@ input{font-family:var(--font)}
 .day-pill{font-family:var(--mono);font-size:12.5px;color:var(--good);background:rgba(61,214,140,.1);border:1px solid rgba(61,214,140,.25);padding:5px 11px;border-radius:99px;display:flex;align-items:center;gap:5px}
 
 /* ---------- Capture bar ---------- */
-.capture-bar{display:flex;gap:8px;padding:0 18px 14px;flex-shrink:0}
+.capture-bar{display:flex;gap:8px;padding:0 18px 14px;flex-shrink:0;align-items:center}
 .capture-bar input{flex:1;padding:13px 15px;font-size:15px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);outline:none}
 .capture-bar input::placeholder{color:var(--text-hint)}
 .capture-bar input:focus{border-color:var(--border-mid)}
-.capture-bar button{width:46px;flex-shrink:0;border:none;border-radius:var(--radius-sm);background:var(--accent);color:#1A0E08;font-size:19px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.capture-prio-btn{width:46px;height:46px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text-hint);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s}
+.capture-prio-btn.active{color:var(--accent);background:var(--accent-dim);border-color:var(--accent)}
+.capture-bar button.submit-btn{width:46px;height:46px;border:none;border-radius:var(--radius-sm);background:var(--accent);color:#1A0E08;font-size:19px;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .capture-bar button:active{opacity:.8}
 
 /* ---------- Card stage ---------- */
@@ -71,7 +73,7 @@ input{font-family:var(--font)}
 .empty-state h3{font-size:17px;font-weight:600;color:var(--text);margin-bottom:6px}
 .empty-state p{font-size:13.5px;line-height:1.5}
 
-/* ---------- Action buttons (desktop / fallback) ---------- */
+/* ---------- Action buttons ---------- */
 .action-row{display:flex;gap:8px;padding:10px 18px 18px;flex-shrink:0}
 .action-btn{flex:1;padding:15px 8px;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:background .12s,border-color .12s;min-width:0}
 .action-btn span{white-space:nowrap;overflow:hidden}
@@ -84,7 +86,7 @@ input{font-family:var(--font)}
 .action-btn.priority{flex:0 0 44px;color:var(--accent)}
 .action-btn.priority.active{background:var(--accent-dim);border-color:var(--accent)}
 
-/* ---------- Sheet (liste complète, cachée par défaut) ---------- */
+/* ---------- Sheet ---------- */
 .sheet-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:90;display:none;align-items:flex-end;justify-content:center}
 .sheet-overlay.show{display:flex}
 .sheet{background:var(--bg);border-radius:20px 20px 0 0;width:100%;max-width:560px;max-height:82vh;display:flex;flex-direction:column;border:1px solid var(--border);border-bottom:none;animation:sheetUp .22s ease}
@@ -98,7 +100,6 @@ input{font-family:var(--font)}
 .sheet-row:active{background:var(--surface)}
 .sheet-row-main{display:flex;align-items:center;gap:10px;width:100%}
 .sheet-row-text{flex:1;font-size:14px;min-width:0}
-.sheet-row.next .sheet-row-text{font-weight:600;color:var(--accent)}
 .sheet-row-btn{background:none;border:none;color:var(--text-hint);font-size:16px;cursor:pointer;padding:5px;border-radius:6px;flex-shrink:0}
 .sheet-row-btn:active{background:var(--surface2)}
 .sheet-row-btn.star.active{color:var(--accent)}
@@ -171,8 +172,6 @@ input{font-family:var(--font)}
 </div>
 
 <div class="app" id="app" style="display:none">
-
-
   <div class="topbar">
     <span class="topbar-title">Focus</span>
     <span class="day-pill"><i class="ti ti-flame" aria-hidden="true"></i><span id="day-count-num">0</span></span>
@@ -182,11 +181,11 @@ input{font-family:var(--font)}
 
   <div class="capture-bar">
     <input type="text" id="capture-input" placeholder="Une tâche qui te passe par la tête…" autocomplete="off" />
-    <button onclick="capture()"><i class="ti ti-plus" aria-hidden="true"></i></button>
+    <button class="capture-prio-btn" id="capture-prio-btn" onclick="toggleCapturePrio()" title="Marquer comme priorité absolue"><i class="ti ti-star" id="capture-prio-icon" aria-hidden="true"></i></button>
+    <button class="submit-btn" onclick="capture()"><i class="ti ti-plus" aria-hidden="true"></i></button>
   </div>
 
   <div class="stage" id="stage"></div>
-
   <div class="action-row" id="action-row"></div>
 </div>
 
@@ -239,6 +238,7 @@ let _nid=Date.now();
 let _sheetTab='pending';
 let _noteTarget=null;
 let _dueTarget=null;
+let _captureIsPrio=false;
 const STALE_DAYS=1;
 
 /* ====================== SUPABASE ====================== */
@@ -261,7 +261,7 @@ function normalizeState(){
     if(t.due===undefined)t.due=null;
     if(t.notifiedOverdue===undefined)t.notifiedOverdue=false;
     if(t.notifiedStale===undefined)t.notifiedStale=false;
-    if(t.archived===undefined)t.archived=false; // Init propriété archive
+    if(t.archived===undefined)t.archived=false;
   });
 }
 
@@ -343,7 +343,7 @@ async function startApp(){
   setTimeout(()=>document.getElementById('capture-input').focus(),150);
 }
 
-/* ====================== HELPERS ====================== */
+/* ====================== HELPERS & TRI FOCUS STRICTOR ====================== */
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function isToday(ts){const d=new Date(ts),n=new Date();return d.toDateString()===n.toDateString();}
 function daysSince(ts){
@@ -364,22 +364,65 @@ function fmtDue(ts){
   const d=new Date(ts);const months=['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc'];
   return `${d.getDate()} ${months[d.getMonth()]}`;
 }
+
+// ALGORITHME DU VÉRITABLE OUTIL DE FOCUS (Tri Strict selon le MVP)
 function pendingTasks(){
-  const pending=state.tasks.filter(t=>!t.done && !t.archived);
-  const prio=pending.filter(t=>t.priority).sort((a,b)=>a.ts-b.ts);
-  const rest=pending.filter(t=>!t.priority).sort((a,b)=>a.ts-b.ts);
-  return [...prio,...rest];
+  const pending = state.tasks.filter(t => !t.done && !t.archived);
+  
+  return pending.sort((a, b) => {
+    // 1. Les priorités absolues d'abord
+    if (a.priority && !b.priority) return -1;
+    if (!a.priority && b.priority) return 1;
+    
+    // 2. Les échéances urgentes (aujourd'hui ou en retard) ensuite
+    const statusA = dueStatus(a);
+    const statusB = dueStatus(b);
+    const isUrgentA = statusA === 'overdue' || statusA === 'today';
+    const isUrgentB = statusB === 'overdue' || statusB === 'today';
+    
+    if (isUrgentA && !isUrgentB) return -1;
+    if (!isUrgentA && isUrgentB) return 1;
+    
+    // 3. Si même niveau d'urgence, tri par la date de deadline la plus proche
+    if (a.due && b.due) return a.due - b.due;
+    if (a.due && !b.due) return -1;
+    if (!a.due && b.due) return 1;
+    
+    // 4. Par défaut, la plus ancienne tâche capturée remonte (Premier Entré, Premier Affiché)
+    return a.ts - b.ts;
+  });
 }
 function currentTask(){const p=pendingTasks();return p.length?p[0]:null;}
 
-/* ====================== CAPTURE ====================== */
+/* ====================== CAPTURE AVEC DEMANDE PRIORITÉ ====================== */
+function toggleCapturePrio(){
+  _captureIsPrio = !_captureIsPrio;
+  const btn = document.getElementById('capture-prio-btn');
+  const icon = document.getElementById('capture-prio-icon');
+  btn.classList.toggle('active', _captureIsPrio);
+  icon.className = _captureIsPrio ? 'ti ti-star-filled' : 'ti ti-star';
+}
+
 function capture(){
   const inp=document.getElementById('capture-input');
   const text=inp.value.trim();
   if(!text)return;
-  state.tasks.push({id:'t'+(_nid++),text,done:false,note:'',priority:false,ts:Date.now(),skips:0,archived:false});
+  
+  state.tasks.push({
+    id:'t'+(_nid++),
+    text,
+    done:false,
+    note:'',
+    priority:_captureIsPrio, // Enregistre le choix de priorité fait à la saisie
+    ts:Date.now(),
+    skips:0,
+    archived:false
+  });
+  
   save();
   inp.value='';
+  // Reset l'état du bouton priorité pour la tâche suivante
+  if(_captureIsPrio) toggleCapturePrio();
   inp.focus();
   renderAll();
 }
@@ -642,7 +685,6 @@ function renderSheet(){
       </div>`;
     }).join('');
   } else {
-    // Onglet ARCHIVÉES
     const list=state.tasks.filter(t=>t.archived).sort((a,b)=>b.ts-a.ts);
     if(!list.length){body.innerHTML=`<div class="sheet-empty" style="text-align:center;padding:20px;color:var(--text-hint);">Aucune carte archivée.</div>`;return;}
     body.innerHTML=list.map(t=>{
@@ -661,7 +703,7 @@ function renderSheet(){
   }
 }
 
-/* ====================== PETITES VICTOIRES ====================== */
+/* ====================== STREAKS & RAPPELS ====================== */
 function todayCompletions(){return state.completions.filter(ts=>isToday(ts));}
 function renderCounts(){
   document.getElementById('day-count-num').textContent=todayCompletions().length;
@@ -690,10 +732,9 @@ function showToast(text){
   el.textContent=text;
   el.classList.add('show');
   if(_toastTimeout)clearTimeout(_toastTimeout);
-  _toastTimeout=setTimeout(()=>el.classList.remove('show'),2800);
+  _saveTimeout=setTimeout(()=>el.classList.remove('show'),2800);
 }
 
-/* ====================== NOTIFICATIONS & RAPPELS ====================== */
 function requestNotifPermission(){
   if(!('Notification' in window)){alert('Ton navigateur ne supporte pas les notifications.');return;}
   Notification.requestPermission().then(perm=>{
