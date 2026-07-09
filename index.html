@@ -5,30 +5,31 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Focus — Une chose à la fois</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,340;0,9..144,480;0,9..144,600;1,9..144,420&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root {
-  /* PALETTE SENSORIELLE : Sauge & Brume (Anti-distraction / TDAH Friendly) */
-  --bg: #0C0F10;          
-  --surface: #151A1C;     
-  --surface2: #1E2528;    
-  --border: rgba(255, 255, 255, 0.03); 
-  --border-mid: rgba(255, 255, 255, 0.09);
-  
-  --text: #E3E7E8;        
-  --text-muted: #7E8B8F;  
-  --text-hint: #414D50;   
-  
-  --card-focus: #7AA68E;  
-  --card-text: #0C0F10;   
-  
-  --accent-muted: rgba(122, 166, 142, 0.15);
-  
-  --good: #87D6B0; --bad: #E58787; --warn: #E5C387;
+  /* PALETTE LATTE : chaude, claire, chill (anti-distraction) */
+  --bg: #F6EEE2;
+  --surface: #FDFAF4;
+  --surface2: #F0E4D2;
+  --border: rgba(58, 46, 39, 0.08);
+  --border-mid: rgba(58, 46, 39, 0.16);
+
+  --text: #2E1B0F;
+  --text-muted: #8C7B6B;
+  --text-hint: #C2AF98;
+
+  --card-focus: #C97B4A;
+  --card-text: #FDFAF4; /* Ajusté pour un excellent contraste sur le fond orange cuivré */
+
+  --accent-muted: rgba(201, 123, 74, 0.12);
+  --accent-orange: #E67E22;
+
+  --good: #6E8F5C; --bad: #C9584A; --warn: #D9A066;
   --radius: 20px; --radius-sm: 12px;
-  --font: 'Instrument Sans', sans-serif; --mono: 'DM Mono', monospace;
+  --font: 'Space Grotesk', sans-serif; --mono: 'DM Mono', monospace; --font-serif: 'Fraunces', serif;
   --spring: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -41,30 +42,30 @@ button, input, textarea{font-family:var(--font);background:none;border:none;colo
 
 /* ---------- Progression Douce ---------- */
 .progress-container{display:flex;align-items:center;gap:12px;padding:16px 18px 4px;font-family:var(--mono);font-size:11px;color:var(--text-hint);flex-shrink:0}
-.progress-bar-bg{flex:1;height:2px;background:var(--surface);border-radius:99px;overflow:hidden;position:relative}
+.progress-bar-bg{flex:1;height:4px;background:var(--surface2);border-radius:99px;overflow:hidden;position:relative}
 .progress-bar-fill{height:100%;background:var(--card-focus);width:0%;transition:width 0.4s var(--spring)}
 .progress-num{font-weight:500;min-width:14px;text-align:center}
 .progress-num.done-count{color:var(--text-muted)}
 
-/* ---------- Top bar & Animation Éphémère du Streak ---------- */
+/* ---------- Top bar & Animation du Streak ---------- */
 .topbar{display:flex;align-items:center;gap:10px;padding:8px 18px;flex-shrink:0}
 .topbar-title{font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--text-hint);text-transform:uppercase;flex:1}
 
 .day-pill{font-family:var(--mono);font-size:12px;font-weight:500;color:var(--text-muted);background:var(--surface);border:1px solid var(--border);padding:4px 10px;border-radius:99px;display:flex;align-items:center;gap:5px;transition: all 0.4s var(--spring);}
-.day-pill i { color: var(--text-hint); transition: transform 0.4s var(--spring), color 0.4s; }
+.day-pill i { color: var(--accent-orange); transition: transform 0.4s var(--spring), color 0.4s; }
 
-/* Micro-récompense visuelle temporaire (Dopamine Shot contrôlé) */
+/* Micro-récompense visuelle temporaire lors de l'allumage */
 .day-pill.ignited {
   color: #FFF;
   background: #1C1615;
   border-color: rgba(229, 135, 135, 0.2);
-  box-shadow: 0 4px 12px rgba(229, 107, 53, 0.08);
+  box-shadow: 0 4px 12px rgba(229, 107, 53, 0.15);
 }
 .day-pill.ignited i {
   background: linear-gradient(180deg, #E55353 0%, #FF9235 50%, #FFD635 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  transform: scale(1.25);
+  transform: scale(1.35) translateY(-1px);
 }
 
 .remaining-pill{font-family:var(--mono);font-size:12px;color:var(--text-muted);background:var(--surface);border:1px solid var(--border);padding:4px 10px;border-radius:99px;cursor:pointer;display:flex;align-items:center;gap:5px;}
@@ -75,29 +76,29 @@ button, input, textarea{font-family:var(--font);background:none;border:none;colo
 .capture-bar input::placeholder{color:var(--text-hint)}
 .capture-bar input:focus{border-color:var(--border-mid)}
 .capture-prio-btn{width:44px;height:44px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text-hint);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
-.capture-prio-btn.active{color:var(--card-focus);background: var(--accent-muted);border-color: rgba(122,166,142,0.2)}
+.capture-prio-btn.active{color:var(--card-focus);background: var(--accent-muted);border-color: var(--border-mid)}
 .capture-bar button.submit-btn{width:44px;height:44px;border-radius:var(--radius-sm);background:var(--surface);border:1px solid var(--border);color:var(--text-muted);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
 
 /* ---------- Le Stage Rééquilibré ---------- */
 .stage{flex:1;display:flex;align-items:center;justify-content:center;padding:8px 18px;position:relative;min-height:0}
 .card-wrap{width:100%;height:100%;max-height:430px;position:relative;display:flex;align-items:center;justify-content:center}
 
-.card{position:absolute;width:100%;height:100%;background:var(--card-focus);border:none;border-radius:var(--radius);padding:32px 24px;display:flex;flex-direction:column;box-shadow:0 20px 40px rgba(0,0,0,0.3);touch-action:pan-y;user-select:none;cursor:grab;transition: transform 0.4s var(--spring), opacity 0.4s var(--spring)}
+.card{position:absolute;width:100%;height:100%;background:var(--card-focus);background-image:radial-gradient(rgba(255,255,255,0.08) 1px, transparent 1px);background-size:9px 9px;border:none;border-radius:var(--radius);padding:32px 24px;display:flex;flex-direction:column;box-shadow:0 16px 32px rgba(58, 46, 39, 0.15);touch-action:pan-y;user-select:none;cursor:grab;transition: transform 0.4s var(--spring), opacity 0.4s var(--spring)}
 .card.dragging{cursor:grabbing;transition:none}
 .card.snap-back{transition:transform .4s var(--spring)}
 .card.fly-out{transition:transform .3s ease-out, opacity .25s ease}
 
 .card-badges{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;}
-.card-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;color:var(--card-text);text-transform:uppercase;letter-spacing:.04em;background:rgba(0,0,0,0.07);padding:3px 8px;border-radius:99px;opacity:0.8;}
+.card-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;color:var(--card-text);text-transform:uppercase;letter-spacing:.04em;background:rgba(255,255,255,0.15);padding:3px 8px;border-radius:99px;}
 
-.card-text{flex:1;display:flex;align-items:center;font-size:23px;font-weight:600;line-height:1.35;word-break:break-word;color:var(--card-text);}
-.card-note{font-size:13px;color:rgba(12,15,16,0.75);font-style:italic;margin-top:12px;padding-top:12px;border-top:1px solid rgba(0,0,0,0.06);max-height:90px;overflow-y:auto}
+.card-text{flex:1;display:flex;align-items:center;font-family:var(--font-serif);font-optical-sizing:auto;font-size:25px;font-weight:480;line-height:1.32;word-break:break-word;color:var(--card-text);}
+.card-note{font-size:13px;color:rgba(255,255,255,0.8);font-style:italic;margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.12);max-height:90px;overflow-y:auto}
 
 .swipe-stamp{position:absolute;top:28px;font-weight:700;font-size:18px;letter-spacing:.06em;border:2px solid;border-radius:6px;padding:3px 10px;opacity:0;transition: opacity 0.1s;z-index:10}
-.swipe-stamp.done{right:24px;color:var(--surface);border-color:var(--surface);transform:rotate(5deg)}
-.swipe-stamp.skip{left:24px;color:var(--surface);border-color:var(--surface);transform:rotate(-5deg)}
+.swipe-stamp.done{right:24px;color:#FFF8F0;border-color:#FFF8F0;transform:rotate(5deg)}
+.swipe-stamp.skip{left:24px;color:#FFF8F0;border-color:#FFF8F0;transform:rotate(-5deg)}
 
-.card-ghost{position:absolute;width:95%;height:100%;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);transform:translateY(10px);z-index:-1;opacity:.3;}
+.card-ghost{position:absolute;width:95%;height:100%;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);transform:translateY(10px);z-index:-1;opacity:.4;}
 
 .empty-state{text-align:center;color:var(--text-muted);padding:40px 24px;max-width:360px;}
 .empty-state i{font-size:36px;color:var(--text-hint);display:block;margin-bottom:14px}
@@ -109,10 +110,10 @@ button, input, textarea{font-family:var(--font);background:none;border:none;colo
 .action-btn{flex:1;padding:12px 6px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text-muted);font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all 0.2s var(--spring)}
 .action-btn.done{background:var(--surface2);border-color:var(--border-mid);color:var(--text);}
 .action-btn.icon-only{flex:0 0 44px;font-size:16px;}
-.action-btn.active{color:var(--card-focus);border-color:rgba(122,166,142,0.2);background:var(--accent-muted)}
+.action-btn.active{color:var(--card-focus);border-color:var(--border-mid);background:var(--accent-muted)}
 
-/* ---------- Le Tiroir de Gestion (Sheet) ---------- */
-.sheet-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);backdrop-filter: blur(2px);z-index:90;display:none;align-items:flex-end;justify-content:center;opacity:0;transition: opacity 0.2s ease}
+/* ---------- Tiroir de Gestion (Sheet) ---------- */
+.sheet-overlay{position:fixed;inset:0;background:rgba(46, 27, 15, 0.2);backdrop-filter: blur(2px);z-index:90;display:none;align-items:flex-end;justify-content:center;opacity:0;transition: opacity 0.2s ease}
 .sheet-overlay.show{display:flex;opacity:1}
 .sheet{background:var(--bg);border-radius:20px 20px 0 0;width:100%;max-width:500px;max-height:75vh;display:flex;flex-direction:column;border:1px solid var(--border);border-bottom:none;transform:translateY(100%);transition: transform 0.3s var(--spring)}
 .sheet-overlay.show .sheet{transform:translateY(0)}
@@ -132,7 +133,7 @@ button, input, textarea{font-family:var(--font);background:none;border:none;colo
 .sheet-btn.danger{color:var(--bad)}
 
 /* ---------- Note de contexte ---------- */
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);backdrop-filter: blur(2px);z-index:100;display:none;align-items:center;justify-content:center;padding:20px;opacity:0;transition: opacity 0.2s ease}
+.modal-overlay{position:fixed;inset:0;background:rgba(46, 27, 15, 0.25);backdrop-filter: blur(2px);z-index:100;display:none;align-items:center;justify-content:center;padding:20px;opacity:0;transition: opacity 0.2s ease}
 .modal-overlay.show{display:flex;opacity:1}
 .modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);width:100%;max-width:360px;padding:20px;transform:scale(0.97);transition: transform 0.2s var(--spring)}
 .modal-overlay.show .modal{transform:scale(1)}
@@ -143,7 +144,7 @@ button, input, textarea{font-family:var(--font);background:none;border:none;colo
 .modal-actions button.save{background:var(--surface2);color:var(--text);border:1px solid var(--border-mid);font-weight:500}
 
 /* ---------- Notifications ---------- */
-.toast-notif{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--surface2);border:1px solid var(--border-mid);color:var(--text);padding:8px 18px;border-radius:99px;font-size:13px;display:flex;align-items:center;gap:6px;box-shadow:0 10px 20px rgba(0,0,0,0.2);z-index:110;opacity:0;pointer-events:none;transition:all 0.3s var(--spring)}
+.toast-notif{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--surface2);border:1px solid var(--border-mid);color:var(--text);padding:8px 18px;border-radius:99px;font-size:13px;display:flex;align-items:center;gap:6px;box-shadow:0 10px 20px rgba(58, 46, 39, 0.1);z-index:110;opacity:0;pointer-events:none;transition:all 0.3s var(--spring)}
 .toast-notif.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .toast-notif i { color: var(--good); }
 
@@ -158,7 +159,7 @@ button, input, textarea{font-family:var(--font);background:none;border:none;colo
 .gate-error{color:var(--bad);font-size:12px;margin-top:8px;min-height:16px}
 .sync-status{position:fixed;bottom:12px;right:14px;font-size:10px;font-family:var(--mono);color:var(--text-hint);z-index:50}
 
-.due-popover{position:fixed;background:var(--surface);border:1px solid var(--border-mid);border-radius:var(--radius-sm);padding:10px;z-index:150;box-shadow:0 10px 25px rgba(0,0,0,.2);display:none;width:210px}
+.due-popover{position:fixed;background:var(--surface);border:1px solid var(--border-mid);border-radius:var(--radius-sm);padding:10px;z-index:150;box-shadow:0 10px 25px rgba(58, 46, 39, 0.15);display:none;width:210px}
 .due-popover.show{display:block}
 .due-popover-row{display:flex;gap:6px;margin-bottom:6px}
 .due-popover button{flex:1;padding:7px;font-size:11.5px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text-muted);cursor:pointer}
@@ -252,6 +253,7 @@ let _dueTarget=null;
 let _captureIsPrio=false;
 let _activeReminders={};
 let _streakTimeout=null;
+let _drag={active:false,startX:0,startY:0,dx:0};
 
 const SUPABASE_URL='https://wwtpyleezukzxsfzidmy.supabase.co';
 const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind3dHB5bGVlenVrenhzZnppZG15Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3MzEwODIsImV4cCI6MjA5ODMwNzA4Mn0.OtCkciHjSIYX-HElEIkbLxYI-Z6wpLwXn4dj4QJ8cgI';
@@ -489,12 +491,11 @@ function doneTask(tid){
   clearTimeout(_activeReminders[tid]);
   state.completions.push(Date.now());
   save();
-  igniteStreak(); // Déclenche la micro-récompense de la flamme
+  igniteStreak();
   showEphemeralToast();
   renderAll();
 }
 
-/* Gère l'allumage temporaire (4s) du compteur de streak */
 function igniteStreak(){
   const pill = document.getElementById('streak-pill');
   if(!pill) return;
