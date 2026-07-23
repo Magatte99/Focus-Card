@@ -402,7 +402,6 @@
         }
         .icon-btn:hover { color: var(--text-main); border-color: var(--text-muted); }
 
-        /* MODALE D'AUTHENTIFICATION COMPATIBLE GITHUB PAGES */
         .auth-overlay {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(8px);
@@ -443,7 +442,6 @@
                 <button id="tabRegister" class="tab-btn" onclick="switchAuthTab('register')">S'inscrire</button>
             </div>
             
-            <!-- CONTENEUR CONNEXION DIRECTE (SANS FORMULAIRE BLOQUANT) -->
             <div id="loginForm">
                 <input type="email" id="loginEmail" class="auth-input" placeholder="E-mail" required />
                 <input type="password" id="loginPassword" class="auth-input" placeholder="Mot de passe" required />
@@ -451,7 +449,6 @@
                 <div id="authErrorMsg" class="auth-error-msg"></div>
             </div>
 
-            <!-- CONTENEUR INSCRIPTION DIRECTE -->
             <div id="registerForm" class="hidden">
                 <input type="email" id="regEmail" class="auth-input" placeholder="E-mail" required />
                 <input type="password" id="regPassword" class="auth-input" placeholder="Mot de passe (min. 6 car.)" minlength="6" required />
@@ -572,12 +569,19 @@
         </div>
     </footer>
 
-    <!-- SCRIPT CORRIGÉ ET OPTIMISÉ POUR GITHUB PAGES -->
+    <!-- SCRIPT CORRIGÉ ET ATTACHÉ AU SCOPE GLOBAL -->
     <script>
         const SUPABASE_URL = 'https://wwtpyleezukzxsfzidmy.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind3dHB5bGVlenVrenhzZnppZG15Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3MzEwODIsImV4cCI6MjA5ODMwNzA4Mn0.OtCkciHjSIYX-HElEIkbLxYI-Z6wpLwXn4dj4QJ8cgI';
         
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        let supabaseClient = null;
+
+        function getSupabase() {
+            if (!supabaseClient && window.supabase) {
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            }
+            return supabaseClient;
+        }
 
         let tasks = [];
         let historyTasks = [];
@@ -587,13 +591,18 @@
         let currentDrawerTab = 'pending';
 
         document.addEventListener('DOMContentLoaded', async () => {
-            const { data: { session } } = await supabase.auth.getSession();
+            const client = getSupabase();
+            if (!client) return;
+
+            const { data: { session } } = await client.auth.getSession();
             if (session) {
                 hideAuthModal();
                 await loadTasks();
+            } else {
+                showAuthModal();
             }
 
-            supabase.auth.onAuthStateChange(async (event, session) => {
+            client.auth.onAuthStateChange(async (event, session) => {
                 if (session) {
                     hideAuthModal();
                     await loadTasks();
@@ -612,6 +621,7 @@
         }
 
         async function handleLoginDirect() {
+            const client = getSupabase();
             const errorDiv = document.getElementById('authErrorMsg');
             const submitBtn = document.getElementById('loginSubmitBtn');
             const email = document.getElementById('loginEmail').value.trim();
@@ -626,7 +636,7 @@
             submitBtn.disabled = true;
 
             try {
-                const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+                const { data, error } = await client.auth.signInWithPassword({ email, password });
                 submitBtn.disabled = false;
 
                 if (error) {
@@ -647,6 +657,7 @@
         }
 
         async function handleRegisterDirect() {
+            const client = getSupabase();
             const errorDiv = document.getElementById('regErrorMsg');
             const submitBtn = document.getElementById('regSubmitBtn');
             const email = document.getElementById('regEmail').value.trim();
@@ -661,7 +672,7 @@
             submitBtn.disabled = true;
 
             try {
-                const { data, error } = await supabase.auth.signUp({ email, password });
+                const { data, error } = await client.auth.signUp({ email, password });
                 submitBtn.disabled = false;
 
                 if (error) {
@@ -677,7 +688,8 @@
         }
 
         async function handleLogout() {
-            await supabase.auth.signOut();
+            const client = getSupabase();
+            if (client) await client.auth.signOut();
             tasks = [];
             historyTasks = [];
             updateUI();
@@ -693,10 +705,13 @@
         }
 
         async function loadTasks() {
-            const { data: { user } } = await supabase.auth.getUser();
+            const client = getSupabase();
+            if (!client) return;
+
+            const { data: { user } } = await client.auth.getUser();
             if (!user) return;
 
-            const { data: pending } = await supabase
+            const { data: pending } = await client
                 .from('tasks')
                 .select('*')
                 .eq('user_id', user.id)
@@ -704,7 +719,7 @@
                 .order('position', { ascending: true })
                 .order('created_at', { ascending: true });
 
-            const { data: history } = await supabase
+            const { data: history } = await client
                 .from('tasks')
                 .select('*')
                 .eq('user_id', user.id)
@@ -720,7 +735,10 @@
 
         async function handleAddTask(e) {
             e.preventDefault();
-            const { data: { user } } = await supabase.auth.getUser();
+            const client = getSupabase();
+            if (!client) return;
+
+            const { data: { user } } = await client.auth.getUser();
 
             const title = document.getElementById('taskTitleInput').value.trim();
             const priority = document.getElementById('taskPriorityInput').value;
@@ -729,7 +747,7 @@
 
             if (!title) return;
 
-            const { data, error } = await supabase
+            const { data, error } = await client
                 .from('tasks')
                 .insert([{
                     user_id: user.id,
@@ -754,11 +772,12 @@
 
         async function saveCurrentNote() {
             if (tasks.length === 0) return;
+            const client = getSupabase();
             const currentTask = tasks[0];
             const newNote = document.getElementById('currentTaskNotesInput').value;
 
             currentTask.notes = newNote;
-            await supabase
+            await client
                 .from('tasks')
                 .update({ notes: newNote })
                 .eq('id', currentTask.id);
@@ -789,9 +808,10 @@
 
         async function completeTask() {
             if (tasks.length === 0) return;
+            const client = getSupabase();
             const currentTask = tasks[0];
 
-            await supabase
+            await client
                 .from('tasks')
                 .update({ 
                     status: 'completed', 
@@ -835,7 +855,7 @@
             setTimeout(() => flame.classList.remove('flame-anim'), 600);
         }
 
-       function showToast(text) {
+        function showToast(text) {
             const container = document.getElementById('toastContainer');
             if (!container) return;
             const toast = document.createElement('div');
@@ -889,7 +909,7 @@
                 return;
             }
 
-            list.forEach((t, index) => {
+            list.forEach((t) => {
                 const row = document.createElement('div');
                 row.className = 'task-item-row';
                 row.innerHTML = `
@@ -908,7 +928,10 @@
         }
 
         async function deleteTask(id) {
-            await supabase.from('tasks').delete().eq('id', id);
+            const client = getSupabase();
+            if (client) {
+                await client.from('tasks').delete().eq('id', id);
+            }
             tasks = tasks.filter(t => t.id !== id);
             updateUI();
             if (!document.getElementById('focusView').classList.contains('hidden')) {
