@@ -5,26 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Focus Card - Espace de Concentration</title>
     
-    <!-- Typographie Moderne -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
-    <!-- SDK Client Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
         :root {
-            /* Palette Focus Card */
-            --bg-neutral: #181614;         /* Fond sombre neutre chaud */
-            --surface-card: #24211E;       /* Fond de carte neutre élevé */
-            --surface-muted: #2E2A26;      /* Subtiles zones de texte */
-            --accent-orange: #FF6B35;      /* Couleur vive d'attention */
+            --bg-neutral: #181614;
+            --surface-card: #24211E;
+            --surface-muted: #2E2A26;
+            --accent-orange: #FF6B35;
             --accent-orange-hover: #E85A26;
-            --accent-orange-glow: rgba(255, 107, 53, 0.15);
-            --text-main: #F5F2EB;          /* Texte principal chaud clair */
-            --text-muted: #A8A095;         /* Texte secondaire neutre */
-            --border-subtle: #38332E;       /* Bordures douces */
+            --accent-orange-glow: rgba(255, 107, 53, 0.2);
+            --text-main: #F5F2EB;
+            --text-muted: #A8A095;
+            --border-subtle: #38332E;
             --badge-priority-bg: rgba(255, 107, 53, 0.12);
             --badge-priority-text: #FF8552;
             --font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -41,14 +38,14 @@
             flex-direction: column;
             justify-content: space-between;
             align-items: center;
-            padding: 24px;
+            padding: 20px;
             overflow-x: hidden;
+            padding-bottom: 80px; /* Espace pour la barre inférieure */
         }
 
-        /* Top Bar Minimaliste */
         header {
             width: 100%;
-            max-width: 900px;
+            max-width: 850px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -88,6 +85,18 @@
             border-radius: 20px;
             font-size: 0.88rem;
             font-weight: 600;
+            transition: transform 0.2s ease;
+        }
+
+        /* Animation Flamme */
+        .flame-anim {
+            animation: flameBounce 0.6s ease-in-out;
+        }
+
+        @keyframes flameBounce {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.4); filter: drop-shadow(0 0 10px var(--accent-orange)); }
+            100% { transform: scale(1); }
         }
 
         .end-day-btn, .logout-btn {
@@ -108,25 +117,23 @@
             background: var(--surface-card);
         }
 
-        /* Conteneur Principal */
         main {
             width: 100%;
             max-width: 850px;
-            min-height: 72vh;
+            min-height: 65vh;
             display: flex;
             align-items: center;
             justify-content: center;
             margin: 16px 0;
         }
 
-        /* Cartes de Vue (Communes) */
         .view-card {
             width: 100%;
-            height: 72vh;
+            min-height: 65vh;
             background-color: var(--surface-card);
             border: 1px solid var(--border-subtle);
             border-radius: 24px;
-            padding: 48px;
+            padding: 36px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
@@ -143,28 +150,62 @@
         }
 
         .hidden { display: none !important; }
-
-        /* Écran de Démarrage & Bilan */
         .text-center { text-align: center; }
-        .start-title { font-size: 2.2rem; font-weight: 800; margin-bottom: 12px; }
-        .start-subtitle { color: var(--text-muted); margin-bottom: 32px; font-size: 1.05rem; }
 
-        .task-summary-box {
+        .start-title { font-size: 2.2rem; font-weight: 800; margin-bottom: 8px; }
+        .start-subtitle { color: var(--text-muted); margin-bottom: 24px; font-size: 1rem; }
+
+        /* Formulaire */
+        .add-task-form {
             background: var(--surface-muted);
+            border: 1px solid var(--border-subtle);
             border-radius: 16px;
-            padding: 24px;
-            margin-bottom: 32px;
+            padding: 20px;
+            margin-bottom: 24px;
             text-align: left;
         }
 
-        /* Vue Focus (Tâche Unique) */
+        .form-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .input-field {
+            width: 100%;
+            background: var(--surface-card);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-main);
+            padding: 12px 14px;
+            border-radius: 10px;
+            font-family: var(--font-family);
+            font-size: 0.9rem;
+        }
+
+        .input-field:focus { outline: none; border-color: var(--accent-orange); }
+
+        .btn-secondary {
+            background: var(--surface-card);
+            color: var(--text-main);
+            border: 1px solid var(--border-subtle);
+            padding: 12px 20px;
+            border-radius: 10px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .btn-secondary:hover { border-color: var(--accent-orange); color: var(--accent-orange); }
+
+        /* Focus Mode Card Elements */
         .card-meta {
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
-        .badge-priority-high {
+        .badge-priority {
             font-size: 0.78rem;
             font-weight: 700;
             text-transform: uppercase;
@@ -177,22 +218,45 @@
         }
 
         .task-title {
-            font-size: 2.2rem;
+            font-size: 2rem;
             font-weight: 700;
             line-height: 1.25;
             color: var(--text-main);
-            margin-bottom: 20px;
+            margin-bottom: 16px;
         }
 
-        .task-notes {
+        /* Note modifiable en direct */
+        .task-notes-container {
             background-color: var(--surface-muted);
             border-left: 3px solid var(--accent-orange);
-            padding: 16px 20px;
+            padding: 16px;
             border-radius: 0 12px 12px 0;
-            color: var(--text-muted);
-            font-size: 1rem;
-            line-height: 1.6;
+            margin-top: 12px;
         }
+
+        .task-notes-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            font-weight: 700;
+            margin-bottom: 6px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .task-notes-input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: var(--text-main);
+            font-family: var(--font-family);
+            font-size: 0.95rem;
+            line-height: 1.5;
+            resize: vertical;
+            min-height: 60px;
+        }
+
+        .task-notes-input:focus { outline: none; }
 
         .card-actions {
             display: flex;
@@ -203,7 +267,6 @@
             border-top: 1px solid var(--border-subtle);
         }
 
-        /* Boutons */
         .btn-primary {
             background-color: var(--accent-orange);
             color: #FFFFFF;
@@ -218,10 +281,7 @@
             transition: all 0.2s ease;
         }
 
-        .btn-primary:hover {
-            background-color: var(--accent-orange-hover);
-            transform: translateY(-2px);
-        }
+        .btn-primary:hover { background-color: var(--accent-orange-hover); transform: translateY(-2px); }
 
         .skip-btn {
             background: transparent;
@@ -233,128 +293,226 @@
             cursor: pointer;
             padding: 12px 18px;
             border-radius: 12px;
-            transition: all 0.2s ease;
         }
 
         .skip-btn:hover { color: var(--text-main); background-color: var(--surface-muted); }
 
-        /* Modal Authentification */
+        /* Message de micro-validation */
+        .toast-msg {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 107, 53, 0.95);
+            color: white;
+            padding: 16px 32px;
+            border-radius: 30px;
+            font-weight: 800;
+            font-size: 1.2rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            pointer-events: none;
+            z-index: 100;
+            animation: toastPop 1.5s ease forward;
+        }
+
+        @keyframes toastPop {
+            0% { opacity: 0; transform: translate(-50%, -40%) scale(0.8); }
+            20% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            80% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            100% { opacity: 0; transform: translate(-50%, -60%) scale(0.9); }
+        }
+
+        /* TIROIR DU BAS / SIDEBAR */
+        .bottom-bar-trigger {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--surface-card);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-main);
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            cursor: pointer;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            z-index: 90;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .bottom-drawer {
+            position: fixed;
+            bottom: -100%;
+            left: 0;
+            width: 100%;
+            height: 65vh;
+            background: var(--surface-card);
+            border-top: 1px solid var(--border-subtle);
+            border-radius: 24px 24px 0 0;
+            box-shadow: 0 -10px 40px rgba(0,0,0,0.6);
+            z-index: 100;
+            transition: bottom 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            padding: 24px;
+            max-width: 850px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .bottom-drawer.open { bottom: 0; }
+
+        .drawer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .drawer-tabs { display: flex; gap: 12px; }
+        .drawer-tab {
+            background: transparent; border: none; color: var(--text-muted);
+            font-weight: 700; font-size: 1rem; cursor: pointer; padding: 6px 12px;
+            border-radius: 8px;
+        }
+        .drawer-tab.active { color: var(--accent-orange); background: var(--surface-muted); }
+
+        .drawer-close {
+            background: transparent; border: none; color: var(--text-muted);
+            font-size: 1.5rem; cursor: pointer;
+        }
+
+        .drawer-content { flex: 1; overflow-y: auto; }
+
+        .task-item-row {
+            background: var(--surface-muted);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .item-actions { display: flex; gap: 8px; align-items: center; }
+        .icon-btn {
+            background: var(--surface-card); border: 1px solid var(--border-subtle);
+            color: var(--text-muted); width: 32px; height: 32px; border-radius: 8px;
+            display: flex; align-items: center; justify-content: center; cursor: pointer;
+        }
+        .icon-btn:hover { color: var(--text-main); border-color: var(--text-muted); }
+
+        /* Auth Modal */
         .auth-overlay {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(8px);
             display: flex; justify-content: center; align-items: center; z-index: 1000;
         }
-
         .auth-card {
             background: var(--surface-card); border: 1px solid var(--border-subtle);
             padding: 36px; border-radius: 24px; max-width: 400px; width: 90%;
         }
-
         .auth-tabs { display: flex; gap: 10px; margin-bottom: 24px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 12px; }
-        .tab-btn {
-            flex: 1; background: transparent; border: none; color: var(--text-muted);
-            font-family: var(--font-family); font-weight: 700; font-size: 0.95rem; cursor: pointer; padding: 8px;
-        }
+        .tab-btn { flex: 1; background: transparent; border: none; color: var(--text-muted); font-weight: 700; cursor: pointer; padding: 8px; }
         .tab-btn.active { color: var(--accent-orange); border-bottom: 2px solid var(--accent-orange); }
+        .auth-input { width: 100%; background: var(--surface-muted); border: 1px solid var(--border-subtle); color: var(--text-main); padding: 14px 16px; border-radius: 12px; margin-bottom: 14px; }
 
-        .auth-input {
-            width: 100%;
-            background: var(--surface-muted);
-            border: 1px solid var(--border-subtle);
-            color: var(--text-main);
-            padding: 14px 16px;
-            border-radius: 12px;
-            font-family: var(--font-family);
-            font-size: 0.95rem;
-            margin-bottom: 14px;
-        }
-
-        .auth-input:focus { outline: none; border-color: var(--accent-orange); }
-
-        /* Footer */
         footer { width: 100%; max-width: 850px; }
         .progress-info { display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin-bottom: 8px; }
         .progress-track { width: 100%; height: 6px; background-color: var(--surface-card); border-radius: 10px; overflow: hidden; border: 1px solid var(--border-subtle); }
         .progress-fill { width: 0%; height: 100%; background: linear-gradient(90deg, var(--accent-orange), #FF8552); transition: width 0.4s ease; }
-
-        @media (max-width: 768px) {
-            body { padding: 16px; }
-            .view-card { padding: 28px 20px; height: 78vh; }
-            .task-title { font-size: 1.6rem; }
-        }
     </style>
 </head>
 <body>
 
-    <!-- OVERLAY AUTHENTIFICATION -->
+    <!-- AUTH OVERLAY -->
     <div id="authModal" class="auth-overlay">
         <div class="auth-card">
             <div class="auth-tabs">
                 <button id="tabLogin" class="tab-btn active" onclick="switchAuthTab('login')">Se connecter</button>
                 <button id="tabRegister" class="tab-btn" onclick="switchAuthTab('register')">S'inscrire</button>
             </div>
-
-            <!-- Formulaire de Connexion -->
             <form id="loginForm" onsubmit="handleLogin(event)">
                 <input type="email" id="loginEmail" class="auth-input" placeholder="E-mail" required />
                 <input type="password" id="loginPassword" class="auth-input" placeholder="Mot de passe" required />
-                <button type="submit" class="btn-primary" style="width: 100%; margin-top: 8px;">Accéder à mon espace 🚀</button>
+                <button type="submit" class="btn-primary" style="width: 100%;">Accéder à mon espace 🚀</button>
             </form>
-
-            <!-- Formulaire d'Inscription -->
             <form id="registerForm" class="hidden" onsubmit="handleRegister(event)">
                 <input type="email" id="regEmail" class="auth-input" placeholder="E-mail" required />
-                <input type="password" id="regPassword" class="auth-input" placeholder="Mot de passe (min. 6 car.)" minlength="6" required />
-                <button type="submit" class="btn-primary" style="width: 100%; margin-top: 8px;">Créer mon compte ✨</button>
+                <input type="password" id="regPassword" class="auth-input" placeholder="Mot de passe" minlength="6" required />
+                <button type="submit" class="btn-primary" style="width: 100%;">Créer mon compte ✨</button>
             </form>
         </div>
     </div>
 
-    <!-- HEADER / TOPBAR -->
+    <!-- HEADER -->
     <header>
         <div class="brand">
             <div class="brand-dot"></div>
             <span>Focus Card</span>
         </div>
-
         <div class="header-actions">
-            <div class="streak-badge">
-                <span>🔥</span>
-                <span id="streakCount">1 jour</span>
+            <div class="streak-badge" id="streakBadge">
+                <span id="flameIcon">🔥</span>
+                <span id="streakCount">0 à la chaîne</span>
             </div>
             <button id="headerEndBtn" class="end-day-btn hidden" onclick="triggerEndDay()">Terminer 🌙</button>
             <button class="logout-btn" onclick="handleLogout()">Déconnexion</button>
         </div>
     </header>
 
-    <!-- ZONE PRINCIPALE -->
+    <!-- MAIN VIEWS -->
     <main>
-        <!-- VUE 1 : RITUEL DE DÉMARRAGE -->
+        <!-- VUE 1 : DÉMARRAGE -->
         <section id="startView" class="view-card text-center">
             <div>
                 <h1 class="start-title">Bonjour ! 👋</h1>
-                <p class="start-subtitle">Prêt à passer en mode concentré ?</p>
+                <p class="start-subtitle">Prépare tes priorités avant d'entrer dans le tunnel de concentration.</p>
                 
-                <div class="task-summary-box">
-                    <p style="color: var(--text-muted); font-size: 0.9rem;">Programme du jour :</p>
-                    <p style="font-size: 1.3rem; font-weight: 700; margin-top: 6px;">📋 <span id="pendingCount">0</span> tâche(s) à accomplir</p>
-                </div>
+                <form class="add-task-form" onsubmit="handleAddTask(event)">
+                    <div class="form-row">
+                        <input type="text" id="taskTitleInput" class="input-field" placeholder="Ex: Rédiger le rapport..." required />
+                        <select id="taskPriorityInput" class="input-field" style="width: auto;">
+                            <option value="Haute">Haute 🔥</option>
+                            <option value="Moyenne" selected>Moyenne ⚡</option>
+                            <option value="Basse">Basse ☕</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <input type="text" id="taskNotesInput" class="input-field" placeholder="Notes / Spécifications (optionnel)" />
+                        <input type="date" id="taskDeadlineInput" class="input-field" style="width: auto;" />
+                        <button type="submit" class="btn-secondary">+ Ajouter</button>
+                    </div>
+                </form>
             </div>
 
-            <button class="btn-primary" onclick="startDay()">🚀 Démarrer ma journée</button>
+            <button class="btn-primary" onclick="startDay()">🚀 Démarrer ma journée (<span id="pendingCount">0</span>)</button>
         </section>
 
-        <!-- VUE 2 : MODE FOCUS (TÂCHE UNIQUE) -->
+        <!-- VUE 2 : MODE FOCUS -->
         <section id="focusView" class="view-card hidden">
+            <div id="toastContainer"></div>
+            
             <div class="card-meta">
-                <span class="badge-priority-high">Priorité Haute</span>
-                <span style="color: var(--text-muted); font-size: 0.85rem;">Mode Tunnel</span>
+                <span id="currentTaskPriority" class="badge-priority">Priorité Haute</span>
+                <span style="color: var(--text-muted); font-size: 0.85rem;" id="currentTaskDeadline"></span>
             </div>
 
-            <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; margin: 24px 0;">
-                <h1 class="task-title" id="currentTaskTitle">Mise en place de l'espace...</h1>
-                <div class="task-notes" id="currentTaskNotes">
-                    Note de contexte liée à la tâche en cours.
+            <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; margin: 16px 0;">
+                <h1 class="task-title" id="currentTaskTitle">Chargement...</h1>
+                
+                <!-- Zone de note éditable en direct -->
+                <div class="task-notes-container">
+                    <div class="task-notes-label">
+                        <span>Notes de contexte</span>
+                        <span style="font-weight: 400; opacity: 0.7;">Modifiable en direct</span>
+                    </div>
+                    <textarea id="currentTaskNotesInput" class="task-notes-input" placeholder="Ajoute des précisions ici..." onblur="saveCurrentNote()"></textarea>
                 </div>
             </div>
 
@@ -364,12 +522,12 @@
             </div>
         </section>
 
-        <!-- VUE 3 : RITUEL DE CLÔTURE -->
+        <!-- VUE 3 : BILAN -->
         <section id="endView" class="view-card text-center hidden">
             <div>
                 <div style="font-size: 4rem; margin-bottom: 16px;">🎉</div>
-                <h1 class="start-title">Excellente journée !</h1>
-                <p class="start-subtitle">Tu es allé au bout de ce que tu t'étais fixé aujourd'hui.</p>
+                <h1 class="start-title">Excellente session !</h1>
+                <p class="start-subtitle">Tu as accompli tes objectifs du moment.</p>
 
                 <div style="background: var(--surface-muted); padding: 24px; border-radius: 16px; margin: 24px 0;">
                     <div style="font-size: 2.2rem; font-weight: 800; color: var(--accent-orange);" id="completedCount">0</div>
@@ -381,10 +539,28 @@
         </section>
     </main>
 
-    <!-- FOOTER / PROGRESSION -->
+    <!-- BOUTON D'OUVERTURE DE LA SIDEBAR DU BAS -->
+    <button class="bottom-bar-trigger" onclick="toggleDrawer(true)">
+        <span>📋 Liste & Historique</span>
+        <span style="font-size: 0.7rem; opacity: 0.7;">▲</span>
+    </button>
+
+    <!-- SIDEBAR DU BAS (TIROIR) -->
+    <div id="bottomDrawer" class="bottom-drawer">
+        <div class="drawer-header">
+            <div class="drawer-tabs">
+                <button id="tabPending" class="drawer-tab active" onclick="switchDrawerTab('pending')">En attente (<span id="drawerPendingCount">0</span>)</button>
+                <button id="tabHistory" class="drawer-tab" onclick="switchDrawerTab('history')">Historique (<span id="drawerHistoryCount">0</span>)</button>
+            </div>
+            <button class="drawer-close" onclick="toggleDrawer(false)">✕</button>
+        </div>
+        <div id="drawerContent" class="drawer-content"></div>
+    </div>
+
+    <!-- FOOTER -->
     <footer>
         <div class="progress-info">
-            <span>Progression du jour</span>
+            <span>Progression de la session</span>
             <span id="progressText">0 / 0 accomplies</span>
         </div>
         <div class="progress-track">
@@ -392,54 +568,54 @@
         </div>
     </footer>
 
-    <!-- LOGIQUE JAVASCRIPT & SUPABASE -->
+    <!-- SCRIPT APPLICATION -->
     <script>
-        // 1. CONFIGURATION SUPABASE (Remplace avec tes identifiants Supabase)
-        const SUPABASE_URL = 'https://TON_PROJET.supabase.co';
-        const SUPABASE_KEY = 'TA_CLE_ANON_PUBLIC';
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const SUPABASE_URL = 'https://wwtpyleezukzxsfzidmy.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind3dHB5bGVlenVrenhzZnppZG15Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3MzEwODIsImV4cCI6MjA5ODMwNzA4Mn0.OtCkciHjSIYX-HElEIkbLxYI-Z6wpLwXn4dj4QJ8cgI';
+        
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // État de l'application
         let tasks = [];
+        let historyTasks = [];
         let totalInitialTasks = 0;
         let completedCount = 0;
+        let streakSessionCount = 0;
+        let currentDrawerTab = 'pending';
 
-        // 2. ÉCOUTEUR DE SESSION & INITIALISATION
         document.addEventListener('DOMContentLoaded', async () => {
             const { data: { session } } = await supabase.auth.getSession();
             if (session) {
                 document.getElementById('authModal').classList.add('hidden');
-                loadTasks();
+                await loadTasks();
             }
 
-            supabase.auth.onAuthStateChange((event, session) => {
+            supabase.auth.onAuthStateChange(async (event, session) => {
                 if (session) {
                     document.getElementById('authModal').classList.add('hidden');
-                    loadTasks();
+                    await loadTasks();
                 } else {
                     document.getElementById('authModal').classList.remove('hidden');
                 }
             });
         });
 
-        // 3. AUTHENTIFICATION
         async function handleLogin(e) {
             e.preventDefault();
-            const email = document.getElementById('loginEmail').value;
-            const password = document.getElementById('loginPassword').value;
-
-            const { error } = await supabase.auth.signInWithPassword({ email, password });
-            if (error) alert("Erreur : " + error.message);
+            const { error } = await supabase.auth.signInWithPassword({
+                email: document.getElementById('loginEmail').value,
+                password: document.getElementById('loginPassword').value
+            });
+            if (error) alert(error.message);
         }
 
         async function handleRegister(e) {
             e.preventDefault();
-            const email = document.getElementById('regEmail').value;
-            const password = document.getElementById('regPassword').value;
-
-            const { error } = await supabase.auth.signUp({ email, password });
-            if (error) alert("Erreur : " + error.message);
-            else alert("Compte créé avec succès !");
+            const { error } = await supabase.auth.signUp({
+                email: document.getElementById('regEmail').value,
+                password: document.getElementById('regPassword').value
+            });
+            if (error) alert(error.message);
+            else alert("Compte créé ! Tu peux te connecter.");
         }
 
         async function handleLogout() {
@@ -447,36 +623,90 @@
         }
 
         function switchAuthTab(tab) {
-            if (tab === 'login') {
-                document.getElementById('loginForm').classList.remove('hidden');
-                document.getElementById('registerForm').classList.add('hidden');
-                document.getElementById('tabLogin').classList.add('active');
-                document.getElementById('tabRegister').classList.remove('active');
-            } else {
-                document.getElementById('loginForm').classList.add('hidden');
-                document.getElementById('registerForm').classList.remove('hidden');
-                document.getElementById('tabRegister').classList.add('active');
-                document.getElementById('tabLogin').classList.remove('active');
+            document.getElementById('loginForm').classList.toggle('hidden', tab !== 'login');
+            document.getElementById('registerForm').classList.toggle('hidden', tab !== 'register');
+            document.getElementById('tabLogin').classList.toggle('active', tab === 'login');
+            document.getElementById('tabRegister').classList.toggle('active', tab === 'register');
+        }
+
+        async function loadTasks() {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            // Chargement des tâches non accomplies
+            const { data: pending } = await supabase
+                .from('tasks')
+                .select('*')
+                .eq('user_id', user.id)
+                .neq('status', 'completed')
+                .order('position', { ascending: true })
+                .order('created_at', { ascending: true });
+
+            // Chargement de l'historique
+            const { data: history } = await supabase
+                .from('tasks')
+                .select('*')
+                .eq('user_id', user.id)
+                .eq('status', 'completed')
+                .order('completed_at', { ascending: false });
+
+            tasks = pending || [];
+            historyTasks = history || [];
+            totalInitialTasks = tasks.length + completedCount;
+
+            updateUI();
+        }
+
+        async function handleAddTask(e) {
+            e.preventDefault();
+            const { data: { user } } = await supabase.auth.getUser();
+
+            const title = document.getElementById('taskTitleInput').value.trim();
+            const priority = document.getElementById('taskPriorityInput').value;
+            const notes = document.getElementById('taskNotesInput').value.trim();
+            const deadline = document.getElementById('taskDeadlineInput').value;
+
+            if (!title) return;
+
+            const { data, error } = await supabase
+                .from('tasks')
+                .insert([{
+                    user_id: user.id,
+                    title: title,
+                    priority: priority,
+                    notes: notes,
+                    deadline: deadline || null,
+                    position: tasks.length,
+                    status: 'pending'
+                }])
+                .select();
+
+            if (!error) {
+                tasks.push(data[0]);
+                totalInitialTasks = tasks.length + completedCount;
+                document.getElementById('taskTitleInput').value = '';
+                document.getElementById('taskNotesInput').value = '';
+                document.getElementById('taskDeadlineInput').value = '';
+                updateUI();
             }
         }
 
-        // 4. GESTION DES TÂCHES
-        async function loadTasks() {
-            // Exemple de chargement initial (Données de test ou chargées depuis Supabase)
-            tasks = [
-                { id: 1, title: "Finaliser l'audit d'intégration Supply Chain", notes: "Relire la section synchronisation des stocks avant l'envoi." },
-                { id: 2, title: "Envoyer les factures du mois", notes: "Vérifier la correspondance des numéros de commande." },
-                { id: 3, title: "Mettre à jour le tableau de bord de suivi", notes: "Ajouter la colonne de statut pour le projet Focus Card." }
-            ];
+        // Sauvegarde dynamique des notes en Mode Focus
+        async function saveCurrentNote() {
+            if (tasks.length === 0) return;
+            const currentTask = tasks[0];
+            const newNote = document.getElementById('currentTaskNotesInput').value;
 
-            totalInitialTasks = tasks.length;
-            document.getElementById('pendingCount').innerText = tasks.length;
-            updateProgress();
+            currentTask.notes = newNote;
+            await supabase
+                .from('tasks')
+                .update({ notes: newNote })
+                .eq('id', currentTask.id);
         }
 
         function startDay() {
             if (tasks.length === 0) {
-                alert("Aucune tâche prévue aujourd'hui !");
+                alert("Ajoute au moins une tâche pour démarrer !");
                 return;
             }
             document.getElementById('startView').classList.add('hidden');
@@ -487,31 +717,81 @@
 
         function renderCurrentTask() {
             if (tasks.length > 0) {
-                document.getElementById('currentTaskTitle').innerText = tasks[0].title;
-                document.getElementById('currentTaskNotes').innerText = tasks[0].notes || "Aucune note additionnelle.";
+                const current = tasks[0];
+                document.getElementById('currentTaskTitle').innerText = current.title;
+                document.getElementById('currentTaskNotesInput').value = current.notes || "";
+                document.getElementById('currentTaskPriority').innerText = "Priorité " + current.priority;
+                document.getElementById('currentTaskDeadline').innerText = current.deadline ? "🗓️ " + current.deadline : "";
             } else {
                 triggerEndDay();
             }
         }
 
-        function completeTask() {
-            completedCount++;
-            tasks.shift(); // Supprime la tâche terminée
-            updateProgress();
+        async function completeTask() {
+            if (tasks.length === 0) return;
+            const currentTask = tasks[0];
 
-            if (tasks.length > 0) {
-                renderCurrentTask();
-            } else {
-                triggerEndDay();
-            }
+            // 1. Sauvegarde Supabase
+            await supabase
+                .from('tasks')
+                .update({ 
+                    status: 'completed', 
+                    completed_at: new Date().toISOString() 
+                })
+                .eq('id', currentTask.id);
+
+            // 2. Mise à jour de la série (Streak) + Animation Flamme
+            streakSessionCount++;
+            triggerFlameAnimation();
+
+            // 3. Message de confirmation (Toast)
+            showToast("Super boulot ! 👏");
+
+            // 4. Inversion dans les listes
+            completedCount++;
+            currentTask.status = 'completed';
+            historyTasks.unshift(currentTask);
+            tasks.shift();
+
+            updateUI();
+
+            // 5. Transition vers la tâche suivante après micro-délai
+            setTimeout(() => {
+                if (tasks.length > 0) {
+                    renderCurrentTask();
+                } else {
+                    triggerEndDay();
+                }
+            }, 1200);
         }
 
         function skipTask() {
             if (tasks.length > 1) {
                 const skipped = tasks.shift();
-                tasks.push(skipped); // Place la tâche sautée à la fin de la file
+                tasks.push(skipped);
                 renderCurrentTask();
+                renderDrawerContent();
             }
+        }
+
+        async function saveNoteAndSync() {
+            await saveCurrentNote();
+        }
+
+        function triggerFlameAnimation() {
+            const flame = document.getElementById('streakBadge');
+            flame.classList.add('flame-anim');
+            document.getElementById('streakCount').innerText = `${streakSessionCount} à la chaîne`;
+            setTimeout(() => flame.classList.remove('flame-anim'), 600);
+        }
+
+        function showToast(text) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = 'toast-msg';
+            toast.innerText = text;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 1500);
         }
 
         function triggerEndDay() {
@@ -523,15 +803,96 @@
 
         function resetToStart() {
             completedCount = 0;
+            streakSessionCount = 0;
+            document.getElementById('streakCount').innerText = "0 à la chaîne";
             document.getElementById('endView').classList.add('hidden');
+            document.getElementById('focusView').classList.add('hidden');
+            document.getElementById('headerEndBtn').classList.add('hidden');
             document.getElementById('startView').classList.remove('hidden');
             loadTasks();
         }
 
-        function updateProgress() {
-            const percentage = totalInitialTasks > 0 ? (completedCount / totalInitialTasks) * 100 : 0;
+        function updateUI() {
+            document.getElementById('pendingCount').innerText = tasks.length;
+            document.getElementById('drawerPendingCount').innerText = tasks.length;
+            document.getElementById('drawerHistoryCount').innerText = historyTasks.length;
+            
+            const total = totalInitialTasks || (tasks.length + completedCount);
+            const percentage = total > 0 ? (completedCount / total) * 100 : 0;
+            
             document.getElementById('progressFill').style.width = percentage + '%';
-            document.getElementById('progressText').innerText = `${completedCount} / ${totalInitialTasks} accomplies`;
+            document.getElementById('progressText').innerText = `${completedCount} / ${total} accomplies`;
+
+            renderDrawerContent();
+        }
+
+        /* GESTION DE LA SIDEBAR DU BAS (TIROIR) */
+        function toggleDrawer(open) {
+            document.getElementById('bottomDrawer').classList.toggle('open', open);
+        }
+
+        function switchDrawerTab(tab) {
+            currentDrawerTab = tab;
+            document.getElementById('tabPending').classList.toggle('active', tab === 'pending');
+            document.getElementById('tabHistory').classList.toggle('active', tab === 'history');
+            renderDrawerContent();
+        }
+
+        function renderDrawerContent() {
+            const container = document.getElementById('drawerContent');
+            
+            if (currentDrawerTab === 'pending') {
+                if (tasks.length === 0) {
+                    container.innerHTML = `<p style="color: var(--text-muted); padding: 20px 0;">Aucune tâche en attente.</p>`;
+                    return;
+                }
+                container.innerHTML = tasks.map((t, idx) => `
+                    <div class="task-item-row">
+                        <div>
+                            <strong style="color: var(--text-main);">${t.title}</strong>
+                            <div style="font-size: 0.8rem; color: var(--text-muted);">${t.priority} ${t.deadline ? '• 🗓️ ' + t.deadline : ''}</div>
+                        </div>
+                        <div class="item-actions">
+                            <button class="icon-btn" onclick="moveTask(${idx}, -1)">▲</button>
+                            <button class="icon-btn" onclick="moveTask(${idx}, 1)">▼</button>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                if (historyTasks.length === 0) {
+                    container.innerHTML = `<p style="color: var(--text-muted); padding: 20px 0;">Aucune tâche dans l'historique.</p>`;
+                    return;
+                }
+                container.innerHTML = historyTasks.map((t) => `
+                    <div class="task-item-row">
+                        <div>
+                            <span style="text-decoration: line-through; color: var(--text-muted);">${t.title}</span>
+                        </div>
+                        <button class="icon-btn" style="color: #ff4d4d;" onclick="deleteTaskFromHistory('${t.id}')">🗑️</button>
+                    </div>
+                `).join('');
+            }
+        }
+
+        async function moveTask(index, direction) {
+            const newIndex = index + direction;
+            if (newIndex < 0 || newIndex >= tasks.length) return;
+
+            const temp = tasks[index];
+            tasks[index] = tasks[newIndex];
+            tasks[newIndex] = temp;
+
+            renderDrawerContent();
+
+            if (!document.getElementById('focusView').classList.contains('hidden')) {
+                renderCurrentTask();
+            }
+        }
+
+        async function deleteTaskFromHistory(taskId) {
+            await supabase.from('tasks').delete().eq('id', taskId);
+            historyTasks = historyTasks.filter(t => t.id !== taskId);
+            updateUI();
         }
     </script>
 </body>
