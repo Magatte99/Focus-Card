@@ -40,7 +40,7 @@
             align-items: center;
             padding: 20px;
             overflow-x: hidden;
-            padding-bottom: 80px; /* Espace pour la barre inférieure */
+            padding-bottom: 80px;
         }
 
         header {
@@ -88,7 +88,6 @@
             transition: transform 0.2s ease;
         }
 
-        /* Animation Flamme */
         .flame-anim {
             animation: flameBounce 0.6s ease-in-out;
         }
@@ -155,7 +154,6 @@
         .start-title { font-size: 2.2rem; font-weight: 800; margin-bottom: 8px; }
         .start-subtitle { color: var(--text-muted); margin-bottom: 24px; font-size: 1rem; }
 
-        /* Formulaire */
         .add-task-form {
             background: var(--surface-muted);
             border: 1px solid var(--border-subtle);
@@ -198,7 +196,6 @@
 
         .btn-secondary:hover { border-color: var(--accent-orange); color: var(--accent-orange); }
 
-        /* Focus Mode Card Elements */
         .card-meta {
             display: flex;
             justify-content: space-between;
@@ -225,7 +222,6 @@
             margin-bottom: 16px;
         }
 
-        /* Note modifiable en direct */
         .task-notes-container {
             background-color: var(--surface-muted);
             border-left: 3px solid var(--accent-orange);
@@ -297,7 +293,6 @@
 
         .skip-btn:hover { color: var(--text-main); background-color: var(--surface-muted); }
 
-        /* Message de micro-validation */
         .toast-msg {
             position: absolute;
             top: 50%; left: 50%;
@@ -311,7 +306,7 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
             pointer-events: none;
             z-index: 100;
-            animation: toastPop 1.5s ease forward;
+            animation: toastPop 1.5s ease forwards;
         }
 
         @keyframes toastPop {
@@ -321,7 +316,6 @@
             100% { opacity: 0; transform: translate(-50%, -60%) scale(0.9); }
         }
 
-        /* TIROIR DU BAS / SIDEBAR */
         .bottom-bar-trigger {
             position: fixed;
             bottom: 20px;
@@ -407,7 +401,7 @@
         }
         .icon-btn:hover { color: var(--text-main); border-color: var(--text-muted); }
 
-        /* Auth Modal */
+        /* AUTH MODAL & ERREURS */
         .auth-overlay {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(8px);
@@ -421,6 +415,15 @@
         .tab-btn { flex: 1; background: transparent; border: none; color: var(--text-muted); font-weight: 700; cursor: pointer; padding: 8px; }
         .tab-btn.active { color: var(--accent-orange); border-bottom: 2px solid var(--accent-orange); }
         .auth-input { width: 100%; background: var(--surface-muted); border: 1px solid var(--border-subtle); color: var(--text-main); padding: 14px 16px; border-radius: 12px; margin-bottom: 14px; }
+        
+        .auth-error-msg {
+            color: #FF5555;
+            font-size: 0.85rem;
+            margin-top: 12px;
+            text-align: center;
+            font-weight: 600;
+            min-height: 20px;
+        }
 
         footer { width: 100%; max-width: 850px; }
         .progress-info { display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin-bottom: 8px; }
@@ -437,15 +440,19 @@
                 <button id="tabLogin" class="tab-btn active" onclick="switchAuthTab('login')">Se connecter</button>
                 <button id="tabRegister" class="tab-btn" onclick="switchAuthTab('register')">S'inscrire</button>
             </div>
+            
             <form id="loginForm" onsubmit="handleLogin(event)">
                 <input type="email" id="loginEmail" class="auth-input" placeholder="E-mail" required />
                 <input type="password" id="loginPassword" class="auth-input" placeholder="Mot de passe" required />
-                <button type="submit" class="btn-primary" style="width: 100%;">Accéder à mon espace 🚀</button>
+                <button type="submit" id="loginSubmitBtn" class="btn-primary" style="width: 100%;">Accéder à mon espace 🚀</button>
+                <div id="authErrorMsg" class="auth-error-msg"></div>
             </form>
+
             <form id="registerForm" class="hidden" onsubmit="handleRegister(event)">
                 <input type="email" id="regEmail" class="auth-input" placeholder="E-mail" required />
                 <input type="password" id="regPassword" class="auth-input" placeholder="Mot de passe" minlength="6" required />
-                <button type="submit" class="btn-primary" style="width: 100%;">Créer mon compte ✨</button>
+                <button type="submit" id="regSubmitBtn" class="btn-primary" style="width: 100%;">Créer mon compte ✨</button>
+                <div id="regErrorMsg" class="auth-error-msg"></div>
             </form>
         </div>
     </div>
@@ -468,7 +475,6 @@
 
     <!-- MAIN VIEWS -->
     <main>
-        <!-- VUE 1 : DÉMARRAGE -->
         <section id="startView" class="view-card text-center">
             <div>
                 <h1 class="start-title">Bonjour ! 👋</h1>
@@ -494,7 +500,6 @@
             <button class="btn-primary" onclick="startDay()">🚀 Démarrer ma journée (<span id="pendingCount">0</span>)</button>
         </section>
 
-        <!-- VUE 2 : MODE FOCUS -->
         <section id="focusView" class="view-card hidden">
             <div id="toastContainer"></div>
             
@@ -506,7 +511,6 @@
             <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; margin: 16px 0;">
                 <h1 class="task-title" id="currentTaskTitle">Chargement...</h1>
                 
-                <!-- Zone de note éditable en direct -->
                 <div class="task-notes-container">
                     <div class="task-notes-label">
                         <span>Notes de contexte</span>
@@ -522,7 +526,6 @@
             </div>
         </section>
 
-        <!-- VUE 3 : BILAN -->
         <section id="endView" class="view-card text-center hidden">
             <div>
                 <div style="font-size: 4rem; margin-bottom: 16px;">🎉</div>
@@ -539,13 +542,11 @@
         </section>
     </main>
 
-    <!-- BOUTON D'OUVERTURE DE LA SIDEBAR DU BAS -->
     <button class="bottom-bar-trigger" onclick="toggleDrawer(true)">
         <span>📋 Liste & Historique</span>
         <span style="font-size: 0.7rem; opacity: 0.7;">▲</span>
     </button>
 
-    <!-- SIDEBAR DU BAS (TIROIR) -->
     <div id="bottomDrawer" class="bottom-drawer">
         <div class="drawer-header">
             <div class="drawer-tabs">
@@ -557,7 +558,6 @@
         <div id="drawerContent" class="drawer-content"></div>
     </div>
 
-    <!-- FOOTER -->
     <footer>
         <div class="progress-info">
             <span>Progression de la session</span>
@@ -568,7 +568,6 @@
         </div>
     </footer>
 
-    <!-- SCRIPT APPLICATION -->
     <script>
         const SUPABASE_URL = 'https://wwtpyleezukzxsfzidmy.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind3dHB5bGVlenVrenhzZnppZG15Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3MzEwODIsImV4cCI6MjA5ODMwNzA4Mn0.OtCkciHjSIYX-HElEIkbLxYI-Z6wpLwXn4dj4QJ8cgI';
@@ -585,41 +584,99 @@
         document.addEventListener('DOMContentLoaded', async () => {
             const { data: { session } } = await supabase.auth.getSession();
             if (session) {
-                document.getElementById('authModal').classList.add('hidden');
+                hideAuthModal();
                 await loadTasks();
             }
 
             supabase.auth.onAuthStateChange(async (event, session) => {
                 if (session) {
-                    document.getElementById('authModal').classList.add('hidden');
+                    hideAuthModal();
                     await loadTasks();
                 } else {
-                    document.getElementById('authModal').classList.remove('hidden');
+                    showAuthModal();
                 }
             });
         });
 
+        function showAuthModal() {
+            document.getElementById('authModal').classList.remove('hidden');
+        }
+
+        function hideAuthModal() {
+            document.getElementById('authModal').classList.add('hidden');
+        }
+
         async function handleLogin(e) {
             e.preventDefault();
-            const { error } = await supabase.auth.signInWithPassword({
-                email: document.getElementById('loginEmail').value,
-                password: document.getElementById('loginPassword').value
-            });
-            if (error) alert(error.message);
+            const errorDiv = document.getElementById('authErrorMsg');
+            const submitBtn = document.getElementById('loginSubmitBtn');
+
+            errorDiv.innerText = "";
+            submitBtn.innerText = "Connexion...";
+            submitBtn.disabled = true;
+
+            try {
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email: document.getElementById('loginEmail').value,
+                    password: document.getElementById('loginPassword').value
+                });
+
+                if (error) {
+                    if (error.message.includes("Invalid login credentials")) {
+                        errorDiv.innerText = "Identifiants incorrects (vérifie l'e-mail ou le mot de passe).";
+                    } else if (error.message.includes("Email not confirmed")) {
+                        errorDiv.innerText = "Veuillez confirmer votre adresse e-mail dans Supabase.";
+                    } else {
+                        errorDiv.innerText = error.message;
+                    }
+                } else {
+                    hideAuthModal();
+                    await loadTasks();
+                }
+            } catch (err) {
+                console.error("Erreur de connexion :", err);
+                errorDiv.innerText = "Impossible de contacter le serveur. Vérifie ta connexion internet et réessaie.";
+            } finally {
+                submitBtn.innerText = "Accéder à mon espace 🚀";
+                submitBtn.disabled = false;
+            }
         }
 
         async function handleRegister(e) {
             e.preventDefault();
-            const { error } = await supabase.auth.signUp({
-                email: document.getElementById('regEmail').value,
-                password: document.getElementById('regPassword').value
-            });
-            if (error) alert(error.message);
-            else alert("Compte créé ! Tu peux te connecter.");
+            const errorDiv = document.getElementById('regErrorMsg');
+            const submitBtn = document.getElementById('regSubmitBtn');
+
+            errorDiv.innerText = "";
+            submitBtn.innerText = "Création du compte...";
+            submitBtn.disabled = true;
+
+            try {
+                const { data, error } = await supabase.auth.signUp({
+                    email: document.getElementById('regEmail').value,
+                    password: document.getElementById('regPassword').value
+                });
+
+                if (error) {
+                    errorDiv.innerText = error.message;
+                } else {
+                    alert("Compte créé avec succès ! Si la confirmation e-mail est activée dans Supabase, valide le lien dans ton e-mail avant de te connecter.");
+                    switchAuthTab('login');
+                }
+            } catch (err) {
+                console.error("Erreur d'inscription :", err);
+                errorDiv.innerText = "Impossible de contacter le serveur. Vérifie ta connexion internet et réessaie.";
+            } finally {
+                submitBtn.innerText = "Créer mon compte ✨";
+                submitBtn.disabled = false;
+            }
         }
 
         async function handleLogout() {
             await supabase.auth.signOut();
+            tasks = [];
+            historyTasks = [];
+            updateUI();
         }
 
         function switchAuthTab(tab) {
@@ -627,13 +684,14 @@
             document.getElementById('registerForm').classList.toggle('hidden', tab !== 'register');
             document.getElementById('tabLogin').classList.toggle('active', tab === 'login');
             document.getElementById('tabRegister').classList.toggle('active', tab === 'register');
+            document.getElementById('authErrorMsg').innerText = "";
+            document.getElementById('regErrorMsg').innerText = "";
         }
 
         async function loadTasks() {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
 
-            // Chargement des tâches non accomplies
             const { data: pending } = await supabase
                 .from('tasks')
                 .select('*')
@@ -642,7 +700,6 @@
                 .order('position', { ascending: true })
                 .order('created_at', { ascending: true });
 
-            // Chargement de l'historique
             const { data: history } = await supabase
                 .from('tasks')
                 .select('*')
@@ -691,7 +748,6 @@
             }
         }
 
-        // Sauvegarde dynamique des notes en Mode Focus
         async function saveCurrentNote() {
             if (tasks.length === 0) return;
             const currentTask = tasks[0];
@@ -731,7 +787,6 @@
             if (tasks.length === 0) return;
             const currentTask = tasks[0];
 
-            // 1. Sauvegarde Supabase
             await supabase
                 .from('tasks')
                 .update({ 
@@ -740,14 +795,10 @@
                 })
                 .eq('id', currentTask.id);
 
-            // 2. Mise à jour de la série (Streak) + Animation Flamme
             streakSessionCount++;
             triggerFlameAnimation();
-
-            // 3. Message de confirmation (Toast)
             showToast("Super boulot ! 👏");
 
-            // 4. Inversion dans les listes
             completedCount++;
             currentTask.status = 'completed';
             historyTasks.unshift(currentTask);
@@ -755,7 +806,6 @@
 
             updateUI();
 
-            // 5. Transition vers la tâche suivante après micro-délai
             setTimeout(() => {
                 if (tasks.length > 0) {
                     renderCurrentTask();
@@ -772,10 +822,6 @@
                 renderCurrentTask();
                 renderDrawerContent();
             }
-        }
-
-        async function saveNoteAndSync() {
-            await saveCurrentNote();
         }
 
         function triggerFlameAnimation() {
@@ -826,7 +872,6 @@
             renderDrawerContent();
         }
 
-        /* GESTION DE LA SIDEBAR DU BAS (TIROIR) */
         function toggleDrawer(open) {
             document.getElementById('bottomDrawer').classList.toggle('open', open);
         }
