@@ -9,6 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
+    <!-- Script Supabase CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
@@ -401,7 +402,7 @@
         }
         .icon-btn:hover { color: var(--text-main); border-color: var(--text-muted); }
 
-        /* AUTH MODAL & ERREURS */
+        /* MODALE D'AUTHENTIFICATION COMPATIBLE GITHUB PAGES */
         .auth-overlay {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(8px);
@@ -417,12 +418,13 @@
         .auth-input { width: 100%; background: var(--surface-muted); border: 1px solid var(--border-subtle); color: var(--text-main); padding: 14px 16px; border-radius: 12px; margin-bottom: 14px; }
         
         .auth-error-msg {
-            color: #FF5555;
-            font-size: 0.85rem;
-            margin-top: 12px;
+            color: #FF6B35;
+            font-size: 0.88rem;
+            margin-top: 14px;
             text-align: center;
             font-weight: 600;
             min-height: 20px;
+            line-height: 1.4;
         }
 
         footer { width: 100%; max-width: 850px; }
@@ -433,7 +435,7 @@
 </head>
 <body>
 
-    <!-- AUTH OVERLAY -->
+    <!-- OVERLAY AUTHENTIFICATION -->
     <div id="authModal" class="auth-overlay">
         <div class="auth-card">
             <div class="auth-tabs">
@@ -441,19 +443,21 @@
                 <button id="tabRegister" class="tab-btn" onclick="switchAuthTab('register')">S'inscrire</button>
             </div>
             
-            <form id="loginForm" onsubmit="handleLogin(event)">
+            <!-- CONTENEUR CONNEXION DIRECTE (SANS FORMULAIRE BLOQUANT) -->
+            <div id="loginForm">
                 <input type="email" id="loginEmail" class="auth-input" placeholder="E-mail" required />
                 <input type="password" id="loginPassword" class="auth-input" placeholder="Mot de passe" required />
-                <button type="submit" id="loginSubmitBtn" class="btn-primary" style="width: 100%;">Accéder à mon espace 🚀</button>
+                <button type="button" id="loginSubmitBtn" class="btn-primary" style="width: 100%;" onclick="handleLoginDirect()">Accéder à mon espace 🚀</button>
                 <div id="authErrorMsg" class="auth-error-msg"></div>
-            </form>
+            </div>
 
-            <form id="registerForm" class="hidden" onsubmit="handleRegister(event)">
+            <!-- CONTENEUR INSCRIPTION DIRECTE -->
+            <div id="registerForm" class="hidden">
                 <input type="email" id="regEmail" class="auth-input" placeholder="E-mail" required />
-                <input type="password" id="regPassword" class="auth-input" placeholder="Mot de passe" minlength="6" required />
-                <button type="submit" id="regSubmitBtn" class="btn-primary" style="width: 100%;">Créer mon compte ✨</button>
+                <input type="password" id="regPassword" class="auth-input" placeholder="Mot de passe (min. 6 car.)" minlength="6" required />
+                <button type="button" id="regSubmitBtn" class="btn-primary" style="width: 100%;" onclick="handleRegisterDirect()">Créer mon compte ✨</button>
                 <div id="regErrorMsg" class="auth-error-msg"></div>
-            </form>
+            </div>
         </div>
     </div>
 
@@ -568,6 +572,7 @@
         </div>
     </footer>
 
+    <!-- SCRIPT CORRIGÉ ET OPTIMISÉ POUR GITHUB PAGES -->
     <script>
         const SUPABASE_URL = 'https://wwtpyleezukzxsfzidmy.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind3dHB5bGVlenVrenhzZnppZG15Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3MzEwODIsImV4cCI6MjA5ODMwNzA4Mn0.OtCkciHjSIYX-HElEIkbLxYI-Z6wpLwXn4dj4QJ8cgI';
@@ -606,69 +611,68 @@
             document.getElementById('authModal').classList.add('hidden');
         }
 
-        async function handleLogin(e) {
-            e.preventDefault();
+        async function handleLoginDirect() {
             const errorDiv = document.getElementById('authErrorMsg');
             const submitBtn = document.getElementById('loginSubmitBtn');
+            const email = document.getElementById('loginEmail').value.trim();
+            const password = document.getElementById('loginPassword').value.trim();
 
-            errorDiv.innerText = "";
-            submitBtn.innerText = "Connexion...";
+            if (!email || !password) {
+                errorDiv.innerText = "⚠️ Merci de remplir votre e-mail et votre mot de passe.";
+                return;
+            }
+
+            errorDiv.innerText = "⏳ Connexion en cours...";
             submitBtn.disabled = true;
 
             try {
-                const { data, error } = await supabase.auth.signInWithPassword({
-                    email: document.getElementById('loginEmail').value,
-                    password: document.getElementById('loginPassword').value
-                });
+                const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+                submitBtn.disabled = false;
 
                 if (error) {
                     if (error.message.includes("Invalid login credentials")) {
-                        errorDiv.innerText = "Identifiants incorrects (vérifie l'e-mail ou le mot de passe).";
-                    } else if (error.message.includes("Email not confirmed")) {
-                        errorDiv.innerText = "Veuillez confirmer votre adresse e-mail dans Supabase.";
+                        errorDiv.innerText = "❌ E-mail ou mot de passe incorrect.";
                     } else {
-                        errorDiv.innerText = error.message;
+                        errorDiv.innerText = "❌ " + error.message;
                     }
                 } else {
+                    errorDiv.innerText = "✅ Connexion réussie !";
                     hideAuthModal();
                     await loadTasks();
                 }
             } catch (err) {
-                console.error("Erreur de connexion :", err);
-                errorDiv.innerText = "Impossible de contacter le serveur. Vérifie ta connexion internet et réessaie.";
-            } finally {
-                submitBtn.innerText = "Accéder à mon espace 🚀";
                 submitBtn.disabled = false;
+                errorDiv.innerText = "❌ Erreur de réseau : " + err.message;
             }
         }
 
-        async function handleRegister(e) {
-            e.preventDefault();
+        async function handleRegisterDirect() {
             const errorDiv = document.getElementById('regErrorMsg');
             const submitBtn = document.getElementById('regSubmitBtn');
+            const email = document.getElementById('regEmail').value.trim();
+            const password = document.getElementById('regPassword').value.trim();
 
-            errorDiv.innerText = "";
-            submitBtn.innerText = "Création du compte...";
+            if (!email || !password) {
+                errorDiv.innerText = "⚠️ Remplis tous les champs pour créer ton compte.";
+                return;
+            }
+
+            errorDiv.innerText = "⏳ Création du compte...";
             submitBtn.disabled = true;
 
             try {
-                const { data, error } = await supabase.auth.signUp({
-                    email: document.getElementById('regEmail').value,
-                    password: document.getElementById('regPassword').value
-                });
+                const { data, error } = await supabase.auth.signUp({ email, password });
+                submitBtn.disabled = false;
 
                 if (error) {
-                    errorDiv.innerText = error.message;
+                    errorDiv.innerText = "❌ " + error.message;
                 } else {
-                    alert("Compte créé avec succès ! Si la confirmation e-mail est activée dans Supabase, valide le lien dans ton e-mail avant de te connecter.");
-                    switchAuthTab('login');
+                    errorDiv.innerText = "✅ Compte créé ! Tu peux maintenant te connecter.";
+                    setTimeout(() => switchAuthTab('login'), 1500);
                 }
             } catch (err) {
-                console.error("Erreur d'inscription :", err);
-                errorDiv.innerText = "Impossible de contacter le serveur. Vérifie ta connexion internet et réessaie.";
-            } finally {
-                submitBtn.innerText = "Créer mon compte ✨";
                 submitBtn.disabled = false;
+                errorDiv.innerText = "❌ Erreur : " + err.message;
             }
         }
 
