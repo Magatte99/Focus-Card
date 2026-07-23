@@ -835,8 +835,9 @@
             setTimeout(() => flame.classList.remove('flame-anim'), 600);
         }
 
-        function showToast(text) {
+       function showToast(text) {
             const container = document.getElementById('toastContainer');
+            if (!container) return;
             const toast = document.createElement('div');
             toast.className = 'toast-msg';
             toast.innerText = text;
@@ -846,38 +847,28 @@
 
         function triggerEndDay() {
             document.getElementById('focusView').classList.add('hidden');
-            document.getElementById('headerEndBtn').classList.add('hidden');
+            document.getElementById('startView').classList.add('hidden');
             document.getElementById('endView').classList.remove('hidden');
+            document.getElementById('headerEndBtn').classList.add('hidden');
             document.getElementById('completedCount').innerText = completedCount;
         }
 
         function resetToStart() {
-            completedCount = 0;
-            streakSessionCount = 0;
-            document.getElementById('streakCount').innerText = "0 à la chaîne";
             document.getElementById('endView').classList.add('hidden');
-            document.getElementById('focusView').classList.add('hidden');
-            document.getElementById('headerEndBtn').classList.add('hidden');
             document.getElementById('startView').classList.remove('hidden');
-            loadTasks();
-        }
-
-        function updateUI() {
-            document.getElementById('pendingCount').innerText = tasks.length;
-            document.getElementById('drawerPendingCount').innerText = tasks.length;
-            document.getElementById('drawerHistoryCount').innerText = historyTasks.length;
-            
-            const total = totalInitialTasks || (tasks.length + completedCount);
-            const percentage = total > 0 ? (completedCount / total) * 100 : 0;
-            
-            document.getElementById('progressFill').style.width = percentage + '%';
-            document.getElementById('progressText').innerText = `${completedCount} / ${total} accomplies`;
-
-            renderDrawerContent();
+            completedCount = 0;
+            totalInitialTasks = tasks.length;
+            updateUI();
         }
 
         function toggleDrawer(open) {
-            document.getElementById('bottomDrawer').classList.toggle('open', open);
+            const drawer = document.getElementById('bottomDrawer');
+            if (open) {
+                drawer.classList.add('open');
+                renderDrawerContent();
+            } else {
+                drawer.classList.remove('open');
+            }
         }
 
         function switchDrawerTab(tab) {
@@ -889,59 +880,55 @@
 
         function renderDrawerContent() {
             const container = document.getElementById('drawerContent');
-            
-            if (currentDrawerTab === 'pending') {
-                if (tasks.length === 0) {
-                    container.innerHTML = `<p style="color: var(--text-muted); padding: 20px 0;">Aucune tâche en attente.</p>`;
-                    return;
-                }
-                container.innerHTML = tasks.map((t, idx) => `
-                    <div class="task-item-row">
-                        <div>
-                            <strong style="color: var(--text-main);">${t.title}</strong>
-                            <div style="font-size: 0.8rem; color: var(--text-muted);">${t.priority} ${t.deadline ? '• 🗓️ ' + t.deadline : ''}</div>
-                        </div>
-                        <div class="item-actions">
-                            <button class="icon-btn" onclick="moveTask(${idx}, -1)">▲</button>
-                            <button class="icon-btn" onclick="moveTask(${idx}, 1)">▼</button>
-                        </div>
-                    </div>
-                `).join('');
-            } else {
-                if (historyTasks.length === 0) {
-                    container.innerHTML = `<p style="color: var(--text-muted); padding: 20px 0;">Aucune tâche dans l'historique.</p>`;
-                    return;
-                }
-                container.innerHTML = historyTasks.map((t) => `
-                    <div class="task-item-row">
-                        <div>
-                            <span style="text-decoration: line-through; color: var(--text-muted);">${t.title}</span>
-                        </div>
-                        <button class="icon-btn" style="color: #ff4d4d;" onclick="deleteTaskFromHistory('${t.id}')">🗑️</button>
-                    </div>
-                `).join('');
+            container.innerHTML = '';
+
+            const list = currentDrawerTab === 'pending' ? tasks : historyTasks;
+
+            if (list.length === 0) {
+                container.innerHTML = `<p style="text-align:center; color: var(--text-muted); padding: 20px;">Aucune tâche dans cette liste.</p>`;
+                return;
             }
+
+            list.forEach((t, index) => {
+                const row = document.createElement('div');
+                row.className = 'task-item-row';
+                row.innerHTML = `
+                    <div>
+                        <strong>${t.title}</strong>
+                        <div style="font-size: 0.8rem; color: var(--text-muted);">
+                            Priorité ${t.priority} ${t.deadline ? '• 🗓️ ' + t.deadline : ''}
+                        </div>
+                    </div>
+                    <div class="item-actions">
+                        ${currentDrawerTab === 'pending' ? `<button class="icon-btn" onclick="deleteTask('${t.id}')">🗑️</button>` : ''}
+                    </div>
+                `;
+                container.appendChild(row);
+            });
         }
 
-        async function moveTask(index, direction) {
-            const newIndex = index + direction;
-            if (newIndex < 0 || newIndex >= tasks.length) return;
-
-            const temp = tasks[index];
-            tasks[index] = tasks[newIndex];
-            tasks[newIndex] = temp;
-
-            renderDrawerContent();
-
+        async function deleteTask(id) {
+            await supabase.from('tasks').delete().eq('id', id);
+            tasks = tasks.filter(t => t.id !== id);
+            updateUI();
             if (!document.getElementById('focusView').classList.contains('hidden')) {
                 renderCurrentTask();
             }
         }
 
-        async function deleteTaskFromHistory(taskId) {
-            await supabase.from('tasks').delete().eq('id', taskId);
-            historyTasks = historyTasks.filter(t => t.id !== taskId);
-            updateUI();
+        function updateUI() {
+            const pendingCount = tasks.length;
+            document.getElementById('pendingCount').innerText = pendingCount;
+            document.getElementById('drawerPendingCount').innerText = pendingCount;
+            document.getElementById('drawerHistoryCount').innerText = historyTasks.length;
+
+            const total = totalInitialTasks || (pendingCount + completedCount);
+            const progressPct = total > 0 ? Math.round((completedCount / total) * 100) : 0;
+            
+            document.getElementById('progressFill').style.width = progressPct + '%';
+            document.getElementById('progressText').innerText = `${completedCount} / ${total} accomplies`;
+
+            renderDrawerContent();
         }
     </script>
 </body>
